@@ -28,7 +28,6 @@ int8_t Pulse400::attach( int8_t pin, uint16_t frequency ) {
     }
     switch_queue = true;
     if ( count == 0 ) { // Start the timer as soon as the first channel is created
-      //Serial.println( "Start timer" );
       timer_start(); 
     }
   }
@@ -57,7 +56,6 @@ Pulse400& Pulse400::detach( int8_t id_channel ) {
 }
 
 Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pulse_width, bool buffer_mode ) {
-  PINHIGHD( 7 );
   if ( id_channel != -1 ) {
     pulse_width = constrain( pulse_width, 1, period_width - 1 );
     if ( channel[id_channel].pulse_width != pulse_width ) {
@@ -86,7 +84,6 @@ Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pulse_width, bool buf
       }
     }
   }
-  PINLOWD( 7 );
   return *this;
 }
 
@@ -115,18 +112,6 @@ Pulse400& Pulse400::set_period( uint16_t period_width ) {
   this->period_width = period_width;
   return *this;
 }
-
-void print_struct_array( struct queue_struct_t *array, size_t len) 
-{ 
-    size_t i;
- 
-    for(i=0; i<len; i++) {
-      Serial.print( array[i].id_channel );
-      Serial.print( " = " );
-      Serial.println( array[i].pulse_width );
-    } 
-    Serial.println("--");
-} 
 
 int cmp_by_pulse_width( const void *a, const void *b ) { 
     struct queue_struct_t *ia = (struct queue_struct_t *)a;
@@ -273,7 +258,6 @@ void Pulse400::timer_stop( void ) {
 #ifdef __AVR_ATmega328P__
 
 void Pulse400::handleInterruptTimer( void ) {
-  //PINHIGHD( 7 );
   int16_t next_interval = 0;   
   pin_bitmap_struct_t bitmap;
   if ( qptr == NULL || qptr->id_channel == PULSE400_END_FLAG ) {  // Start of period: set all pins HIGH
@@ -299,13 +283,11 @@ void Pulse400::handleInterruptTimer( void ) {
     }
   }  
   Timer1.setPeriod( next_interval ); 
-  //PINLOWD( 7 );
 }
 
 #else 
 
 void Pulse400::handleInterruptTimer( void ) {
-  //PINHIGHD( 7 );
   int16_t next_interval = 0;   
   if ( qptr == NULL || qptr->id_channel == PULSE400_END_FLAG ) { 
     if ( switch_queue ) {
@@ -339,7 +321,6 @@ void Pulse400::handleInterruptTimer( void ) {
 #else 
   Timer1.setPeriod( next_interval ); 
 #endif
-  //PINLOWD( 7 );
 }
 
 #endif
