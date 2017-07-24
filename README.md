@@ -1,4 +1,4 @@
-* Pulse400 - High speed 400 Hz Arduino ESC & Servo library. *
+## Pulse400 - High speed 400 Hz Arduino ESC & Servo library. ##
 
 Generates 400 Hz PWM control pulses for servos and multicopter electronic speed controllers (ESC). By varying the pulse and period width frequencies of more than 1 Khz can be obtained if the receiving hardware can handle the signals. Can control 12 ESC's and/or Servo's at the same time at different frequencies.
 
@@ -25,7 +25,7 @@ Pulse400 generates the pulses at the same time from only a single timer. 8 secti
 | 0Hz   | - | - | - | - | - | - | - | - |
 | 50Hz  | 1 | - | - | - | - | - | - | - |
 | 100Hz | 1 | - | - | - | 1 | - | - | - |
-| 200Hz | 1 |   | 1 |   | 1 |   | 1 | - |
+| 200Hz | 1 | - | 1 | - | 1 | - | 1 | - |
 | 400Hz | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 |
 
 
