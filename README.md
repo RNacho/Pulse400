@@ -10,14 +10,14 @@ Provides the following frontend classes
 - Multi400: Control multiple motors (bank) as a single object
 - Servo400: Drop in replacement for the Arduino Servo library
 
-Example sketch
+Example
+
 ~~~c++
 #include <Pulse400.h>
 
 Multi400 esc;
 
 setup() {
-
   esc.begin( 4, 5, 6, 7 );
   delay( 1000 );
   esc.setSpeed( 300, 300, 300, 300 );
@@ -27,7 +27,6 @@ setup() {
   esc.setSpeed( 0, 0, 0, 0 );
   delay( 1000 );
   esc.end();
-  
 }
 
 void loop() {
@@ -36,7 +35,7 @@ void loop() {
 
 ### WARNING ###
 
-This is quite new software and there are undoubtedly bugs in it. If the PWM signal stops and your quadcopter crashes on your neighbours new Ferrari, or worse, his newborn child, I assume no responsibility at all.  
+This is quite new software and there are undoubtedly bugs in it. If the PWM signal stops and your quadcopter crashes on your neighbours new Ferrari, or worse, his newborn child, I assume no responsibility at all. The same applies if your expensive ESCs or brushless motors can fire and burn to a crisp. See the LICENSE file for more info.
 
 ### Platform dependencies & prerequisites ###
 
@@ -62,9 +61,54 @@ Pulse400 generates the pulses at the same time from only a single timer. 8 secti
 | 200Hz | 1 | - | 1 | - | 1 | - | 1 | - |
 | 400Hz | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 |
 
-The Pulse400 class is not meant to be used directly in a sketch. Instead use one (or more) of the Esc400/Multi400/Servo400 frontend classes. They work together fine, so you can use a Multi400 object to control your multicopter while controlling you camera pan & tilt with two Servo400 objects.
+The Pulse400 class is not meant to be used directly in a sketch. Instead use one (or more) of the Esc400/Multi400/Servo400 frontend classes. They work together fine, so you can use a Multi400 object to control your quadcopter's 4 motors at 400 Hz while controlling you camera pan & tilt with two Servo400 objects at 50 Hz.
 
 The Esc400 and Multi400 classes allow you to manipulate the minimum and maximum pulse width that is used and they also allow you to tune the period setting. By changing the period setting from the default 2500 a lower value and adapting the minimum and maximum pulse to fit within that period you can increase the frequency even further. See below for an explanation.
+
+### The Esc400 class ###
+
+The Esc400 class controls one PWM channel, so you basically create one for each motor. 
+
+#### Methods ####
+
+| begin( int8_t pin, uint16_t frequency = 400 )             | Initializes the object and attaches it to a pin. Optionally sets the PWM frequency for this object to 0 (off), 50, 100, 200 and 400 (default).                                                                                                                                |
+|-----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| frequency( uint16_t v )                                   | Sets the PWM frequency for this object to 0 (off), 50, 100, 200 and 400 (default).                                                                                                                                                                                            |
+| speed( uint16_t v )                                       | Sets the speed for the ESC, value must be between 0 (min throttle) and 1000 (max throttle).                                                                                                                                                                                   |
+| speed()                                                   | Retrieves the current speed.                                                                                                                                                                                                                                                  |
+| range(uint16_t min, uint16_t min,uint16_t period = 2500 ) | Defines the mapping of the min - max throttle value (0 - 1000) to a pulse length in microseconds. The optional third argument sets the length of the total pulse period. Setting this to a lower value than 2500 will allow use of higher than 400 Hz frequencies. See below. |
+
+#### Example ####
+
+~~~c++
+#include <Pulse400.h>
+
+int pin[] = { 4, 5, 6, 7 };
+
+Esc400 motor[4];
+
+void setup() {
+  for ( int m = 0; m < 4; m++ ) 
+    motor[m].begin( pin[m] );
+  delay( 1000 );
+  for ( int m = 0; m < 4; m++ )
+    motor[m].speed( 200 );
+  delay( 1000 );
+  for ( int m = 0; m < 4; m++ )
+    motor[m].speed( 0 );
+}
+
+void loop() {
+}
+~~~
+
+
+
+### The Multi400 class ###
+
+
+### The Servo400 class ###
+
 
 ### Making it even faster ###
 
