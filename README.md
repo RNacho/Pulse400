@@ -69,17 +69,19 @@ The Esc400 and Multi400 classes allow you to manipulate the minimum and maximum 
 
 The Esc400 class controls one PWM channel, so you basically create one for each motor. 
 
-#### Methods ####
 
-| Method            | Description                                                                                                                    | 
+| Method | Description | 
 |-----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| begin( int8_t pin, uint16_t frequency = 400 | Initializes the object and attaches it to a pin. Optionally sets the PWM frequency for this object to 0 (off), 50, 100, 200 and 400 (default).                              |
-| frequency( uint16_t v )                                   | Sets the PWM frequency for this object to 0 (off), 50, 100, 200 and 400 (default).                                                                                                                                                                                            |
-| speed( uint16_t v )                                       | Sets the speed for the ESC, value must be between 0 (min throttle) and 1000 (max throttle).                                                                                                                                                                                   |
-| speed()                                                   | Retrieves the current speed.                                                                                                                                                                                                                                                  |
+| begin( int8_t pin, uint16_t frequency = 400 | Initializes the object and attaches it to a pin. Optionally sets the PWM frequency for this object to 0 (off), 50, 100, 200 and 400 (default). |
+| frequency( uint16_t v ) | Sets the PWM frequency for this object to 0 (off), 50, 100, 200 and 400 (default). |
+| speed( uint16_t v ) | Sets the speed for the ESC, value must be between 0 (min throttle) and 1000 (max throttle) |
+| speed() | Retrieves the current speed. |
 | range( uint16_t min, uint16_t min,uint16_t period = 2500 ) | Defines the mapping of the min - max throttle value (0 - 1000) to a pulse length in microseconds. The optional third argument sets the length of the total pulse period. Setting this to a lower value than 2500 will allow use of higher than 400 Hz frequencies. See below. |
+| end() | Detaches the object from the pin.|
 
-#### Example ####
+Note that changing the period argument for range has a global effect. All PWM streams, even those created by Esc400 or Servo400 will be affected by it.
+
+#### Example code ####
 
 ~~~c++
 #include <Pulse400.h>
@@ -104,8 +106,31 @@ void loop() {
 ~~~
 
 
-
 ### The Multi400 class ###
+
+Use this class to control up to 8 motors (bank) as a single object. Setting the motor speeds for multiple motors is a lot more efficient than setting it for one motor at a time (as the Esc400 class does). To be able to efficiently generate a waveform the Pulse400 class must maintain a list (queue) of steps (pin or or off) to execute. This list must be sorted by pulse width. For each change in speed the list must be inspected and ossible resorted which is relatively expensive in MCU time. By using the Multi400 class and setting the speeds for all motors at once, the generator only needs to sort the list once per bank and not once per motor.
+
+| Method | Description | 
+|-----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| begin( int8_t pin0, int8_t pin1... pin7 ) | Initializes the object and attaches it to a series of pins. All arguments but the first are optional, specify at least 1 and at most 8 escs/motors. |
+| frequency( uint16_t v ) | Sets the PWM frequency for this object to 0 (off), 50, 100, 200 and 400 (default). |
+| setSpeed( int16_t v0, int16_t v0....int16_t v7 ) | Sets the speed for all ESCs at the same time, value must be between 0 (min throttle) and 1000 (max throttle). |
+| speed( uint8_t no, uint16_t v ) | Sets the speed for the ESC identified by 'no', value must be between 0 (min throttle) and 1000 (max throttle). |
+| speed( uint8_t no )| Retrieves the current speed for ESC 'no'.|
+| range( uint16_t min, uint16_t min,uint16_t period = 2500 ) | Defines the mapping of the min - max throttle value (0 - 1000) to a pulse length in microseconds. The optional third argument sets the length of the total pulse period. Setting this to a lower value than 2500 will allow use of higher than 400 Hz frequencies. See below. |
+| end() | Detaches the object from the attached pins |
+
+Note that changing the period argument for range has a global effect. All PWM streams, even those created by Esc400 or Servo400 will be affected by it.
+
+
+  Multi400& begin( int8_t pin0 = -1, int8_t pin1 = -1, int8_t pin2 = -1, int8_t pin3 = -1, int8_t pin4 = -1, int8_t pin5 = -1, int8_t pin6 = -1, int8_t pin7 = -1, uint16_t frequency = 400 );
+  Multi400& frequency( uint16_t v );
+  Multi400& setSpeed( int16_t v0, int16_t v1 = -1, int16_t v2 = -1, int16_t v3 = -1, int16_t v4 = -1, int16_t v5 = -1 , int16_t v6 = -1, int16_t v7 = -1 ); 
+  Multi400& speed( uint8_t no, int16_t v, bool buffer_mode = false );
+  int16_t speed( uint8_t no );
+  // WARNING the period argument applies to all active PWM streams
+  Multi400& range( uint16_t min, uint16_t max, uint16_t period = PULSE400_PERIOD_WIDTH ); 
+  Multi400& end( void );
 
 
 ### The Servo400 class ###
