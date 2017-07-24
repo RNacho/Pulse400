@@ -121,22 +121,82 @@ Use this class to control up to 8 motors (bank) as a single object. Setting the 
 
 Note that changing the period argument for range has a global effect. All PWM streams, even those created by Esc400 or Servo400 will be affected by it.
 
+#### Example code ####
+
+```c++
+#include <Pulse400.h>
+
+int pin[] = { 4, 5, 6, 7 };
+
+Multi400 motors;
+
+void setup() {
+  motors.begin( pin[0], pin[1], pin[2], pin[3] );
+  delay( 1000 );
+  motors.setSpeed( 200, 200, 200, 200 );
+  delay( 1000 );
+  motors.setSpeed( 0, 0, 0, 0 );
+  motors.end();
+}
+
+void loop() {
+}
+```
+
+
 ### The Servo400 class ###
 
-The Servo400 class strives to be an exact copy of the standard Arduino Servo class. The default PWM frequency is 50Hz, but that can be changed with the (new) ~~~frequency()~~~ method.
+The Servo400 class strives to be an exact copy of the standard Arduino Servo class. The default PWM frequency is 50Hz, but that can be changed with the (new) ```frequency()``` method.
 
 | Method | Description | 
 |-----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| uint8_t attach(int pin) | Attach the given pin to the next free channel, sets pinMode, returns channel number or 0 if failure |
-| uint8_t attach(int pin, int min, int max ) | As above but also sets min and max values for writes |
-| void frequency( uint16_t v ) | Sets the PWM frequency to 0, 50 (default), 100, 200 or 400 HZ (this method is not in the original Servo library) |
-| void detach() | Detaches the object from the pin |
-| void write(int value) | if value is < 200 its treated as an angle, otherwise as pulse width in microseconds |
-| void writeMicroseconds(int value) | Write pulse width in microseconds |
-| int read() | Returns current pulse width as an angle between 0 and 180 degrees |
-| int readMicroseconds() | returns current pulse width in microseconds for this servo |
-| bool attached() | return true if this servo is attached, otherwise false |
+| attach(int pin) | Attach the given pin to the next free channel, sets pinMode, returns channel number or 0 if failure |
+| attach(int pin, int min, int max ) | As above but also sets min and max values for writes |
+| frequency( uint16_t v ) | Sets the PWM frequency to 0, 50 (default), 100, 200 or 400 HZ (this method is not in the original Servo library) |
+| detach() | Detaches the object from the pin |
+| write(int value) | If value is < 200 its treated as an angle, otherwise as pulse width in microseconds |
+| writeMicroseconds(int value) | Write pulse width in microseconds |
+| read() | Returns current pulse width (int) as an angle between 0 and 180 degrees |
+| readMicroseconds() | returns current pulse width (int) in microseconds for this servo |
+| attached() | return true if this servo is attached, otherwise false |
   
+#### Example code ####
+
+```c++
+/* Sweep
+ by BARRAGAN <http://barraganstudio.com>
+ This example code is in the public domain.
+
+ modified 8 Nov 2013
+ by Scott Fitzgerald
+ http://www.arduino.cc/en/Tutorial/Sweep
+*/
+
+#include <Pulse400.h>
+
+Servo400 myservo;  // create servo object to control a servo
+// twelve servo objects can be created on most boards
+
+int pos = 0;    // variable to store the servo position
+
+void setup() {
+  myservo.attach(9);  // attaches the servo on pin 9 to the servo object
+}
+
+void loop() {
+  for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+    myservo.write(pos);              // tell servo to go to position in variable 'pos'
+    delay(15);                       // waits 15ms for the servo to reach the position
+  }
+  for (pos = 180; pos >= 0; pos -= 1) { // goes from 180 degrees to 0 degrees
+    myservo.write(pos);              // tell servo to go to position in variable 'pos'
+    delay(15);                       // waits 15ms for the servo to reach the position
+  }
+}
+```  
+
+The example code and method descriptions are taken from the Servo library documentation and adapted slightly for Servo400.
 
 ### Making it even faster ###
 
