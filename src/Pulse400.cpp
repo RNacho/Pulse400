@@ -278,8 +278,7 @@ void Pulse400::handleInterruptTimer( void ) {
       PORTD &= ~bitmap.dmask;
       PORTB &= ~bitmap.bmask;
       PORTC &= ~bitmap.cmask;
-      qptr++;
-      next_interval = qptr->pulse_width - previous_pulse_width;
+      next_interval = ( ++qptr )->pulse_width - previous_pulse_width;
     }
   }  
   Timer1.setPeriod( next_interval ); 
@@ -311,8 +310,7 @@ void Pulse400::handleInterruptTimer( void ) {
     while ( !next_interval ) { // Process equal pulse widths in the same timer interrupt period
       channel_struct_t *c = &channel[qptr->id_channel];
       digitalWrite( c->pin, LOW );
-      qptr++;
-      next_interval = qptr->pulse_width - previous_pulse_width;
+      next_interval = ( ++qptr )->pulse_width - previous_pulse_width;
     }
   }
   
