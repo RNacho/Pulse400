@@ -13,10 +13,6 @@ int8_t Pulse400::attach( int8_t pin, uint16_t frequency ) {
     channel[id_channel].pin = pin;
     channel[id_channel].pulse_width = PULSE400_DEFAULT_PULSE;
     set_frequency( id_channel, frequency, true );
-#ifdef __AVR_ATmega328P__
-    channel[id_channel].port = pin < 8 ? &PORTD : ( pin < 14 ? &PORTB : &PORTC ); // obsolete?
-    channel[id_channel].port_mask = pin < 8 ? bit( pin ) : ( pin < 14 ? bit( pin - 8 ) : bit( pin - 14 ) );
-#endif    
     cli();
     if ( switch_queue ) { // Queue switch in progress, abort while ints are off
       switch_queue = false;
@@ -275,6 +271,7 @@ void Pulse400::handleInterruptTimer( void ) {
     uint16_t previous_pulse_width = qptr->pulse_width;
     while ( !next_interval ) { // Process equal pulse widths in the same timer interrupt period
       bitmap.lmask = qptr->lmask;
+      //bitmap.lmask = 1L << qptr->pin; Will be same speed but will use less RAM!
       PORTD &= ~bitmap.dmask;
       PORTB &= ~bitmap.bmask;
       PORTC &= ~bitmap.cmask;
@@ -312,8 +309,7 @@ void Pulse400::handleInterruptTimer( void ) {
       digitalWrite( c->pin, LOW );
       next_interval = ( ++qptr )->pulse_width - previous_pulse_width;
     }
-  }
-  
+  }  
 #ifdef PULSE400_USE_INTERVALTIMER  
   esc_timer.begin( ESC400PWM_ISR, next_interval );
 #else 

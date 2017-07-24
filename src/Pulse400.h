@@ -43,8 +43,6 @@ struct channel_struct_t {
   volatile int8_t pin = -1;
   volatile uint16_t pulse_width;
   volatile int8_t period_mask; 
-  volatile uint8_t * port; // obsolete?
-  volatile uint8_t port_mask; // obsolete?
 };
 
 struct pin_bitmap_struct_t {
@@ -56,11 +54,13 @@ struct pin_bitmap_struct_t {
 
 struct queue_struct_t {
   volatile int8_t id_channel;
-  volatile uint16_t pulse_width;
-  union {
+  volatile uint16_t pulse_width; // Save RAM here! Add 'pin' byte instead!
+#ifdef __AVR_ATmega328P__
+  union { 
     uint32_t lmask;
     struct { uint8_t dmask, bmask, cmask, dummy; };
   };  
+#endif    
 };
 
 
