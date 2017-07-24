@@ -71,9 +71,9 @@ The Esc400 class controls one PWM channel, so you basically create one for each 
 
 #### Methods ####
 
-| begin( int8_t pin, uint16_t frequency = 400 )             | Initializes the object and attaches it to a pin. Optionally sets the PWM frequency for this object to 0 (off), 50, 100, 200 and 400 (default).                                                                                                                                |
+| Method            | Description                                                                                                                    | 
 |-----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Method                                                    | Description                   |
+| begin( int8_t pin, uint16_t frequency = 400 | Initializes the object and attaches it to a pin. Optionally sets the PWM frequency for this object to 0 (off), 50, 100, 200 and 400 (default).                              |
 | frequency( uint16_t v )                                   | Sets the PWM frequency for this object to 0 (off), 50, 100, 200 and 400 (default).                                                                                                                                                                                            |
 | speed( uint16_t v )                                       | Sets the speed for the ESC, value must be between 0 (min throttle) and 1000 (max throttle).                                                                                                                                                                                   |
 | speed()                                                   | Retrieves the current speed.                                                                                                                                                                                                                                                  |
