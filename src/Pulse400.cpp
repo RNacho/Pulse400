@@ -134,6 +134,8 @@ int cmp_by_pulse_width( const void *a, const void *b ) {
     return ia->pulse_width - ib->pulse_width; 
 }
 
+#ifdef __AVR_ATmega328P__        
+
 void Pulse400::init_reg_bitmaps( int8_t id_queue ) { 
     int q = 0;
     for ( int c = 0; c < PULSE400_NO_OF_PERIODS; c++ ) period_bitmap[c].lmask = 0L;
@@ -146,6 +148,7 @@ void Pulse400::init_reg_bitmaps( int8_t id_queue ) {
       q++;
     }            
 } 
+#endif
 
 // Update/refresh the entire queue 
 

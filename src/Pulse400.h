@@ -1,5 +1,7 @@
 #pragma once 
 
+#include <Arduino.h>
+
 /* TODO
 - Synchronized mode: 
     set master_period_bitmap to 50HZ, then whenever an update is executed 
@@ -27,9 +29,7 @@
 #define PULSE400_USE_INTERVALTIMER
 #endif  
 
-#ifdef PULSE400_USE_INTERVALTIMER
-IntervalTimer esc_timer;
-#else 
+#ifndef PULSE400_USE_INTERVALTIMER
 #include <TimerOne.h>
 #endif
 
@@ -162,6 +162,9 @@ class Pulse400 {
   void update_queue( int8_t id_queue_src, int8_t id_queue_dst, int8_t id_channel, uint16_t pulse_width );
   void update_queue( int8_t id_queue );
   void init_reg_bitmaps( int8_t id_queue );
+#ifdef PULSE400_USE_INTERVALTIMER
+  IntervalTimer esc_timer;
+#endif  
 
   public: // Temporary! FIXME
   volatile int8_t period_counter;
