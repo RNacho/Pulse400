@@ -1,0 +1,19 @@
+{
+    "name": "Pulse400",
+    "version": "0.0.1",
+    "keywords": "state, machine, esc, servo, pwm",
+    "description": "High speed 400 Hz Arduino ESC & Servo PWM library",
+    "authors":
+    {
+        "name": "Tinkerspy",
+        "email": "tinkerspy@myown.mailcan.com",
+        "url": "https://github.com/tinkerspy"
+    },
+    "repository":
+    {
+        "type": "git",
+        "url": "https://github.com/tinkerspy/Pulse400"
+    },
+    "frameworks": "arduino",
+    "platforms": "atmelavr, teensy"
+}
