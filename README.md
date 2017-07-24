@@ -73,11 +73,11 @@ The Esc400 class controls one PWM channel, so you basically create one for each 
 
 | begin( int8_t pin, uint16_t frequency = 400 )             | Initializes the object and attaches it to a pin. Optionally sets the PWM frequency for this object to 0 (off), 50, 100, 200 and 400 (default).                                                                                                                                |
 |-----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Method                                                    | Description                   
+| Method                                                    | Description                   |
 | frequency( uint16_t v )                                   | Sets the PWM frequency for this object to 0 (off), 50, 100, 200 and 400 (default).                                                                                                                                                                                            |
 | speed( uint16_t v )                                       | Sets the speed for the ESC, value must be between 0 (min throttle) and 1000 (max throttle).                                                                                                                                                                                   |
 | speed()                                                   | Retrieves the current speed.                                                                                                                                                                                                                                                  |
-| range(uint16_t min, uint16_t min,uint16_t period = 2500 ) | Defines the mapping of the min - max throttle value (0 - 1000) to a pulse length in microseconds. The optional third argument sets the length of the total pulse period. Setting this to a lower value than 2500 will allow use of higher than 400 Hz frequencies. See below. |
+| range( uint16_t min, uint16_t min,uint16_t period = 2500 ) | Defines the mapping of the min - max throttle value (0 - 1000) to a pulse length in microseconds. The optional third argument sets the length of the total pulse period. Setting this to a lower value than 2500 will allow use of higher than 400 Hz frequencies. See below. |
 
 #### Example ####
 
