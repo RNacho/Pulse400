@@ -1,7 +1,6 @@
 #include <Pulse400.h>
 
 Pulse400 pulse400; // Global object
-
 Pulse400 * Pulse400::instance; // Only one instance allowed (singleton)
 
 int8_t Pulse400::attach( int8_t pin, uint16_t frequency ) {
@@ -83,6 +82,11 @@ Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pulse_width, bool buf
   return *this;
 }
 
+int16_t Pulse400::get_pulse( int8_t id_channel ) {
+  return id_channel > -1 ? channel[id_channel].pulse_width : -1;
+}
+
+
 uint8_t Pulse400::freq2mask( uint16_t frequency ) {
   uint8_t mask = PULSE400_400HZ;
   if ( frequency < 50 ) mask = PULSE400_0HZ;
@@ -93,14 +97,7 @@ uint8_t Pulse400::freq2mask( uint16_t frequency ) {
 }
 
 Pulse400& Pulse400::set_frequency( int8_t id_channel, uint8_t mask, bool buffer_mode /* = false */ ) {
-  channel[id_channel].period_mask = mask;
-#ifdef __AVR_ATmega328P__
-  if ( !buffer_mode ) {    
-    switch_queue = false;
-    init_reg_bitmaps( active_queue ^ 1 );
-    switch_queue = true;
-  }
-#endif
+  period_mask = mask;
   return *this;
 }
 
@@ -109,27 +106,18 @@ Pulse400& Pulse400::set_period( uint16_t period_width ) {
   return *this;
 }
 
-int cmp_by_pulse_width( const void *a, const void *b ) { 
-    struct queue_struct_t *ia = (struct queue_struct_t *)a;
-    struct queue_struct_t *ib = (struct queue_struct_t *)b;
-    return ia->pulse_width - ib->pulse_width; 
+void Pulse400::bubble_sort_on_pulse_width( uint8_t list[], uint8_t size ) {
+    int temp;
+    for ( uint8_t i = 0; i < size; i++ ) {
+        for ( uint8_t j = size - 1; j > i; j-- ) {
+            if ( channel[list[j]].pulse_width < channel[list[ j - 1 ]].pulse_width ) {
+                temp = list[ j - 1 ];
+                list[ j - 1 ]=list[ j ];
+                list[ j ]=temp;
+            }
+        }
+    }
 }
-
-#ifdef __AVR_ATmega328P__        
-
-void Pulse400::init_reg_bitmaps( int8_t id_queue ) { 
-    int q = 0;
-    for ( int c = 0; c < PULSE400_NO_OF_PERIODS; c++ ) period_bitmap[c].lmask = 0L;
-    while ( queue[id_queue][q].id_channel != PULSE400_END_FLAG ) {
-      uint8_t id_channel = queue[id_queue][q].id_channel;
-      for ( int c = 0; c < PULSE400_NO_OF_PERIODS; c++ ) {
-        if ( ( channel[id_channel].period_mask & ( 1 << c ) ) > 0 )   
-          period_bitmap[c].lmask |= ( 1L << channel[id_channel].pin );
-      }
-      q++;
-    }            
-} 
-#endif
 
 // Update/refresh the entire queue 
 
@@ -137,20 +125,14 @@ void Pulse400::update_queue( int8_t id_queue ) {
   int queue_cnt = 0;
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
     if ( channel[ch].pin > -1 ) {
-      queue[id_queue][queue_cnt].id_channel = ch;
-      queue[id_queue][queue_cnt].pulse_width = channel[ch].pulse_width;
-#ifdef __AVR_ATmega328P__        
-      queue[id_queue][queue_cnt].lmask = ( 1L << channel[ch].pin );
-#endif
+      queue[id_queue][queue_cnt] = ch;
       queue_cnt++;
     }
   }
-  queue[id_queue][queue_cnt].id_channel = PULSE400_END_FLAG; // Sentinel value
-  queue[id_queue][queue_cnt].pulse_width = period_width; 
-  qsort( queue[id_queue], queue_cnt, sizeof( struct queue_struct_t ), cmp_by_pulse_width );
-#ifdef __AVR_ATmega328P__
-  init_reg_bitmaps( id_queue );
-#endif    
+  queue[id_queue][queue_cnt] = PULSE400_END_FLAG; // Sentinel value
+  
+  // FIXME FIXME FIXME
+  bubble_sort_on_pulse_width( queue[id_queue], queue_cnt );
 }
 
 // Update one entry in the queue
@@ -158,32 +140,28 @@ void Pulse400::update_queue( int8_t id_queue ) {
 void Pulse400::update_queue( int8_t id_queue_src, int8_t id_queue_dst, int8_t id_channel, uint16_t pulse_width ) {
   int loc = 0; 
   int cnt = 0;
-  queue_struct_t tmp;
+  uint8_t tmp;
   channel[id_channel].pulse_width = pulse_width;
   // Copy the ALT queue from the ACT queue and determine length & item location
-  while ( queue[id_queue_src][cnt].id_channel != PULSE400_END_FLAG ) {
-    if ( queue[id_queue_src][cnt].id_channel == id_channel ) loc = cnt;
+  while ( queue[id_queue_src][cnt] != PULSE400_END_FLAG ) {
+    if ( queue[id_queue_src][cnt] == id_channel ) loc = cnt;
     queue[id_queue_dst][cnt] = queue[id_queue_src][cnt]; 
     cnt++;   
   }
   queue[id_queue_dst][cnt] = queue[id_queue_src][cnt]; // Copy sentinel
-  queue[id_queue_dst][loc].pulse_width = pulse_width; // Set the new pulse width
   // Must maintain sort orders
-  while ( loc > 0 && pulse_width < queue[id_queue_dst][loc - 1].pulse_width ) {
+  while ( loc > 0 && pulse_width < channel[queue[id_queue_dst][loc - 1]].pulse_width ) {
     tmp = queue[id_queue_dst][loc]; // Swap with previous entry
     queue[id_queue_dst][loc] = queue[id_queue_dst][loc - 1];
     queue[id_queue_dst][loc - 1] = tmp;    
     loc--;
   }
-  while ( loc < cnt && pulse_width > queue[id_queue_dst][loc + 1].pulse_width ) {
+  while ( loc < cnt && pulse_width > channel[queue[id_queue_dst][loc + 1]].pulse_width ) {
     tmp = queue[id_queue_dst][loc]; // Swap with next entry
     queue[id_queue_dst][loc] = queue[id_queue_dst][loc + 1];
     queue[id_queue_dst][loc + 1] = tmp;    
     loc++;
   }
-#ifdef __AVR_ATmega328P__
-  init_reg_bitmaps( id_queue_dst );
-#endif      
 }
 
 int Pulse400::channel_count( void ) {
@@ -251,65 +229,35 @@ void Pulse400::timer_stop( void ) {
 #endif    
 }
 
-#ifdef __AVR_ATmega328P__
-
 void Pulse400::handleInterruptTimer( void ) {
+  PINHIGHD( 7 );
   int16_t next_interval = 0;   
-  pin_bitmap_struct_t bitmap;
-  if ( qptr == NULL || qptr->id_channel == PULSE400_END_FLAG ) {  // Start of period: set all pins HIGH
-    if ( switch_queue ) {
-      switch_queue = false;
-      active_queue = active_queue ^ 1;
-    }
-    qptr = queue[active_queue]; // Point the queue pointer at the start of the active queue
-    bitmap.lmask = period_bitmap[++period_counter & B00000111].lmask; 
-    PORTD |= bitmap.dmask;
-    PORTB |= bitmap.bmask;
-    PORTC |= bitmap.cmask;
-    next_interval = qptr->pulse_width;
-  } else { // Set one or more pins LOW again in turn
-    uint16_t previous_pulse_width = qptr->pulse_width;
-    while ( !next_interval ) { // Process equal pulse widths in the same timer interrupt period
-      bitmap.lmask = qptr->lmask;
-      //bitmap.lmask = 1L << qptr->pin; Will be same speed but will use less RAM!
-      PORTD &= ~bitmap.dmask;
-      PORTB &= ~bitmap.bmask;
-      PORTC &= ~bitmap.cmask;
-      next_interval = ( ++qptr )->pulse_width - previous_pulse_width;
-    }
-  }  
-  Timer1.setPeriod( next_interval ); 
-}
-
-#else 
-
-void Pulse400::handleInterruptTimer( void ) {
-  int16_t next_interval = 0;   
-  if ( qptr == NULL || qptr->id_channel == PULSE400_END_FLAG ) { 
+  if ( qptr == NULL || *qptr == PULSE400_END_FLAG ) { 
     if ( switch_queue ) {
       switch_queue = false;
       active_queue = active_queue ^ 1;
     }
     qptr = queue[active_queue]; // Point the queue pointer at the start of the queue
     period_counter = ++period_counter & B00000111;
-    for ( uint8_t i = 0; ; i++ ) {
-      if ( qptr->id_channel == PULSE400_END_FLAG ) break;
-      channel_struct_t *c = &channel[qptr->id_channel];
-      if ( ( 1 << ( period_counter & B0000111 ) ) & c->period_mask ) {
-        digitalWrite( c->pin, HIGH );   // This costs 7.43 us per pin!
+    while( *qptr != PULSE400_END_FLAG ) {
+      channel_struct_t *c = &channel[*qptr];
+      if ( ( 1 << ( period_counter & B0000111 ) ) & period_mask ) {
+        digitalWrite( c->pin, HIGH );   
       }
       qptr++;
     }
     qptr = queue[active_queue];
-    next_interval = qptr->pulse_width;
+    next_interval = channel[*qptr].pulse_width;
   } else {
-    uint16_t previous_pulse_width = qptr->pulse_width;
+    uint16_t previous_pulse_width = channel[*qptr].pulse_width;
     while ( !next_interval ) { // Process equal pulse widths in the same timer interrupt period
-      channel_struct_t *c = &channel[qptr->id_channel];
-      digitalWrite( c->pin, LOW );
-      next_interval = ( ++qptr )->pulse_width - previous_pulse_width;
+      digitalWrite( channel[*qptr].pin, LOW );
+      next_interval = channel[*( ++qptr )].pulse_width - previous_pulse_width;
     }
+    if ( *qptr == PULSE400_END_FLAG ) 
+      next_interval = period_width - previous_pulse_width;
   }  
+  PINLOWD( 7 );
 #ifdef PULSE400_USE_INTERVALTIMER  
   esc_timer.begin( ESC400PWM_ISR, next_interval );
 #else 
@@ -317,4 +265,3 @@ void Pulse400::handleInterruptTimer( void ) {
 #endif
 }
 
-#endif

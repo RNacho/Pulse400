@@ -34,15 +34,14 @@ Multi400& Multi400::setSpeed( int16_t v0, int16_t v1, int16_t v2, int16_t v3, in
 
 Multi400& Multi400::speed( uint8_t no, int16_t v, bool buffer_mode ) {
   if ( id_channel[no] > -1 && v > -1 ) {
-    current_speed[no] = constrain( v, 0, 1000 );
-    pulse400.set_pulse( id_channel[no], map( current_speed[no], 0, 1000, min, max ), buffer_mode );
+    pulse400.set_pulse( id_channel[no], map( constrain( v, 0, 1000 ), 0, 1000, min, max ), buffer_mode );
   }
   return *this;
 }
 
 int16_t Multi400::speed( uint8_t no ) {
-  return id_channel[no] == -1 ? -1 : current_speed[no];
-}
+  return id_channel[no] == -1 ? -1 : map( pulse400.get_pulse( id_channel[no] ), min, max, 1, 1000 );
+} 
 
 Multi400& Multi400::range( uint16_t min, uint16_t max, uint16_t period /* = PULSE400_PERIOD_WIDTH */ ) {
   this->min = min;

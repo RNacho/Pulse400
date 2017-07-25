@@ -14,7 +14,7 @@
 #define PULSE400_200HZ B01010101
 #define PULSE400_400HZ B11111111
 
-#define PULSE400_MAX_CHANNELS 12
+#define PULSE400_MAX_CHANNELS 8
 #define PULSE400_NO_OF_PERIODS 8
 #define PULSE400_DEFAULT_PULSE 1000
 #define PULSE400_PERIOD_WIDTH 2500
@@ -42,7 +42,6 @@ extern Pulse400 pulse400;
 struct channel_struct_t { 
   volatile int8_t pin = -1;
   volatile uint16_t pulse_width;
-  volatile int8_t period_mask; 
 };
 
 struct pin_bitmap_struct_t {
@@ -50,17 +49,6 @@ struct pin_bitmap_struct_t {
     uint32_t lmask;
     struct { uint8_t dmask, bmask, cmask, dummy; };
   };  
-};
-
-struct queue_struct_t {
-  volatile int8_t id_channel;
-  volatile uint16_t pulse_width; // Save RAM here! Add 'pin' byte instead!
-#ifdef __AVR_ATmega328P__
-  union { 
-    uint32_t lmask;
-    struct { uint8_t dmask, bmask, cmask, dummy; };
-  };  
-#endif    
 };
 
 
@@ -101,10 +89,9 @@ class Multi400 {
   Multi400& range( uint16_t min, uint16_t max, uint16_t period = PULSE400_PERIOD_WIDTH ); 
   Multi400& end( void );
 
-  int16_t id_channel[MULTI400_NO_OF_CHANNELS] =  { -1, -1, -1, -1, -1, -1, -1, -1 };
+  int8_t id_channel[MULTI400_NO_OF_CHANNELS] =  { -1, -1, -1, -1, -1, -1, -1, -1 };
   
   private:
-  uint16_t current_speed[MULTI400_NO_OF_CHANNELS] = { 0, 0, 0, 0, 0, 0, 0, 0 }; 
   uint16_t min = 1000;
   uint16_t max = 2000;
   uint8_t last_esc = 0;
@@ -135,7 +122,6 @@ class Servo400 {
   
 };
 
-
 // The back-end 400 Hz PWM library, this is used by the frontend classes 
 // The interface is not designed to be used directly by sketches
 
@@ -145,6 +131,7 @@ class Pulse400 {
   int8_t attach( int8_t pin, uint16_t frequency = 400 ); // Attaches or resets refresh rate
   Pulse400& detach( int8_t id_channel ); // Detaches and optionally frees timer
   Pulse400& set_pulse( int8_t id_channel, uint16_t pulse_width, bool buffer_mode = false );
+  int16_t get_pulse( int8_t id_channel );
   Pulse400& set_frequency( int8_t id_channel, uint8_t mask, bool buffer_mode = false );
   Pulse400& set_period( uint16_t period_width = PULSE400_PERIOD_WIDTH );
   uint8_t freq2mask( uint16_t frequency );
@@ -162,6 +149,7 @@ class Pulse400 {
   void update_queue( int8_t id_queue_src, int8_t id_queue_dst, int8_t id_channel, uint16_t pulse_width );
   void update_queue( int8_t id_queue );
   void init_reg_bitmaps( int8_t id_queue );
+  void bubble_sort_on_pulse_width( uint8_t list[], uint8_t size );
 #ifdef PULSE400_USE_INTERVALTIMER
   IntervalTimer esc_timer;
 #endif  
@@ -172,15 +160,11 @@ class Pulse400 {
   volatile bool switch_queue;
   volatile uint8_t buffer_cnt = 0;
   volatile uint16_t period_width = PULSE400_PERIOD_WIDTH;
+  volatile int8_t period_mask = PULSE400_400HZ; 
+
   channel_struct_t channel[PULSE400_MAX_CHANNELS];
-  queue_struct_t queue[2][PULSE400_MAX_CHANNELS + 1] = { 
-    { { PULSE400_END_FLAG, PULSE400_PERIOD_WIDTH } }, 
-    { { PULSE400_END_FLAG, PULSE400_PERIOD_WIDTH } } 
-  };
-#ifdef __AVR_ATmega328P__
-  pin_bitmap_struct_t period_bitmap[PULSE400_NO_OF_PERIODS];
-#endif 
+  uint8_t queue[2][PULSE400_MAX_CHANNELS + 1] = { { PULSE400_END_FLAG }, { PULSE400_END_FLAG } };
   
-  volatile queue_struct_t * qptr;
+  volatile uint8_t * qptr;
 };
 
