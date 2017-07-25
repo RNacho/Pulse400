@@ -27,13 +27,6 @@ void Servo400::detach() {
 bool Servo400::attached() {
   return id_channel > -1;
 }
-
-// Set PWM frequency to 0, 50 (default), 100, 200 or 400 HZ
-
-void Servo400::frequency( uint16_t frequency ) {
-  pulse400.set_frequency( id_channel, pulse400.freq2mask( frequency ) );
-}
-
 // Write pulse width in microseconds 
 
 void Servo400::writeMicroseconds(int value) {

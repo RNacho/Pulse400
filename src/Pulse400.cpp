@@ -3,7 +3,7 @@
 Pulse400 pulse400; // Global object
 Pulse400 * Pulse400::instance; // Only one instance allowed (singleton)
 
-int8_t Pulse400::attach( int8_t pin, uint16_t frequency ) {
+int8_t Pulse400::attach( int8_t pin ) {
   int id_channel = channel_find( pin ); 
   if ( id_channel > -1 ) {
     pinMode( pin, OUTPUT );
@@ -11,7 +11,6 @@ int8_t Pulse400::attach( int8_t pin, uint16_t frequency ) {
     int count = channel_count();
     channel[id_channel].pin = pin;
     channel[id_channel].pulse_width = PULSE400_DEFAULT_PULSE;
-    set_frequency( id_channel, frequency, true );
     cli();
     if ( switch_queue ) { // Queue switch in progress, abort while ints are off
       switch_queue = false;
@@ -86,23 +85,9 @@ int16_t Pulse400::get_pulse( int8_t id_channel ) {
   return id_channel > -1 ? channel[id_channel].pulse_width : -1;
 }
 
-
-uint8_t Pulse400::freq2mask( uint16_t frequency ) {
-  uint8_t mask = PULSE400_400HZ;
-  if ( frequency < 50 ) mask = PULSE400_0HZ;
-    else if ( frequency < 100 ) mask = PULSE400_50HZ;
-    else if ( frequency < 200 ) mask = PULSE400_100HZ;
-    else if ( frequency < 400 ) mask = PULSE400_200HZ;
-  return mask;  
-}
-
-Pulse400& Pulse400::set_frequency( int8_t id_channel, uint8_t mask, bool buffer_mode /* = false */ ) {
-  period_mask = mask;
-  return *this;
-}
-
-Pulse400& Pulse400::set_period( uint16_t period_width ) {
-  this->period_width = period_width;
+Pulse400& Pulse400::frequency( uint8_t freqmask, int16_t period /* = 2500 */ ) {
+  period_mask = freqmask;
+  period_width = period;
   return *this;
 }
 
@@ -131,7 +116,7 @@ void Pulse400::update_queue( int8_t id_queue ) {
   }
   queue[id_queue][queue_cnt] = PULSE400_END_FLAG; // Sentinel value
   bubble_sort_on_pulse_width( queue[id_queue], queue_cnt );
-#ifdef __AVR_ATmega328P__
+#if defined( __AVR_ATmega328P__ ) || defined( __TEENSY_3X__ )
   pins_high_portb = 0; // Prepare pin high bitmaps for UNO optimization
   pins_high_portc = 0;
   pins_high_portd = 0;
@@ -235,14 +220,14 @@ void Pulse400::handleInterruptTimer( void ) {
       active_queue = active_queue ^ 1;
     }
     if ( ( 1 << ( ++period_counter & B0000111 ) ) & period_mask ) {
-#ifdef __AVR_ATmega328P__
+#if defined( __AVR_ATmega328P__ ) || defined( __TEENSY_3X__ )
       PORTB |= pins_high_portb; // Arduino UNO optimization: flip pins per bank
-      PORTC |= pins_high_portc;
+      PORTC |= pins_high_portc; // Teensyduino AVR emulation handles this as well 
       PORTD |= pins_high_portd;
 #else
       qptr = queue[active_queue]; // Point the queue pointer at the start of the queue
       while( *qptr != PULSE400_END_FLAG ) {
-        digitalWrite( channel[*qptr].pin, HIGH );   
+        digitalWrite( channel[*qptr].pin, HIGH );
         qptr++;
       }
 #endif      
@@ -252,13 +237,17 @@ void Pulse400::handleInterruptTimer( void ) {
   } else {
     uint16_t previous_pulse_width = channel[*qptr].pulse_width;
     while ( !next_interval ) { // Process equal pulse widths in the same timer interrupt period
+#if defined( __TEENSY_3X__  )     
+      digitalWriteFast( channel[*qptr].pin, LOW );
+#else        
       digitalWrite( channel[*qptr].pin, LOW );
+#endif    
       next_interval = channel[*( ++qptr )].pulse_width - previous_pulse_width;
     }
     if ( *qptr == PULSE400_END_FLAG ) 
       next_interval = period_width - previous_pulse_width;
   }  
-#ifdef PULSE400_USE_INTERVALTIMER  
+#if defined( PULSE400_USE_INTERVALTIMER )  
   esc_timer.begin( ESC400PWM_ISR, next_interval );
 #else 
   Timer1.setPeriod( next_interval ); 

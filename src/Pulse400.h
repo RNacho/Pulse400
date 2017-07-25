@@ -8,13 +8,14 @@
     while the ISR is in dead time, reset the qptr and the period_pointer and set a new period()
 */
 
+#define PULSE400_MAX_CHANNELS 8 // Maximum value 126
+
 #define PULSE400_0HZ   B00000000
 #define PULSE400_50HZ  B00000001
 #define PULSE400_100HZ B00010001
 #define PULSE400_200HZ B01010101
 #define PULSE400_400HZ B11111111
 
-#define PULSE400_MAX_CHANNELS 8
 #define PULSE400_NO_OF_PERIODS 8
 #define PULSE400_DEFAULT_PULSE 1000
 #define PULSE400_PERIOD_WIDTH 2500
@@ -25,12 +26,31 @@
 #define PINHIGHD( _pin ) PORTD |= ( 1 << _pin );
 #define PINLOWD( _pin ) PORTD &= ~( 1 << _pin );
 
-#if ( defined( __MKL26Z64__ ) || defined( __MK20DX256__ ) || defined( __MK62FX512__ ) || defined( __MK66FX1M0__ ) )
-#define PULSE400_USE_INTERVALTIMER
+#if defined(__MKL26Z64__)
+  #define __TEENSY_3X__
+  #define __TEENSY_LC__
+#elif defined(__MK20DX256__)
+  #define __TEENSY_3X__
+  #define __TEENSY_32__
+#elif defined(__MK20DX128__)
+  #define __TEENSY_3X__
+  #define __TEENSY_30__
+#elif defined(__MK64FX512__)
+  #define __TEENSY_3X__
+  #define __TEENSY_35__
+#elif defined(__MK66FX1M0__)
+  #define __TEENSY_3X__
+  #define __TEENSY_36__
+#endif
+
+// For Teensy 3.0/3.1/3.2/3.5/3.6/LC use Teensyduino intervalTimer
+
+#if defined( __TEENSY_3X__ )
+  #define PULSE400_USE_INTERVALTIMER
 #endif  
 
 #ifndef PULSE400_USE_INTERVALTIMER
-#include <TimerOne.h>
+  #include <TimerOne.h>
 #endif
 
 class Esc400;
@@ -57,12 +77,12 @@ struct pin_bitmap_struct_t {
 class Esc400 {
   
   public:
-  Esc400& begin( int8_t pin, uint16_t frequency = 400 );
+  Esc400& begin( int8_t pin );
   Esc400& frequency( uint16_t v );
   Esc400& speed( uint16_t v ); 
   int16_t speed( void ); 
   // WARNING the period argument applies to all active PWM streams
-  Esc400& range( uint16_t min, uint16_t max, uint16_t period = PULSE400_PERIOD_WIDTH ); 
+  Esc400& range( uint16_t min, uint16_t max ); 
   Esc400& end( void );
   
   private:
@@ -72,20 +92,17 @@ class Esc400 {
   
 };
 
-
-// Multiple ESC frontend for Pulse400: use this to control banks of motors with one object
-
+// Multiple ESC frontend for Pulse400: use this to control banks of motors with a single object
 
 class Multi400 {
   
   public:
-  Multi400& begin( int8_t pin0 = -1, int8_t pin1 = -1, int8_t pin2 = -1, int8_t pin3 = -1, int8_t pin4 = -1, int8_t pin5 = -1, int8_t pin6 = -1, int8_t pin7 = -1, uint16_t frequency = 400 );
-  Multi400& frequency( uint16_t v );
+  Multi400& begin( int8_t pin0 = -1, int8_t pin1 = -1, int8_t pin2 = -1, int8_t pin3 = -1, int8_t pin4 = -1, int8_t pin5 = -1, int8_t pin6 = -1, int8_t pin7 = -1 );
   Multi400& setSpeed( int16_t v0, int16_t v1 = -1, int16_t v2 = -1, int16_t v3 = -1, int16_t v4 = -1, int16_t v5 = -1 , int16_t v6 = -1, int16_t v7 = -1 ); 
   Multi400& speed( uint8_t no, int16_t v, bool buffer_mode = false );
   int16_t speed( uint8_t no );
-  // WARNING the period argument applies to all active PWM streams
-  Multi400& range( uint16_t min, uint16_t max, uint16_t period = PULSE400_PERIOD_WIDTH ); 
+  Multi400& off( void );
+  Multi400& range( uint16_t min, uint16_t max ); 
   Multi400& end( void );
 
   int8_t id_channel[MULTI400_NO_OF_CHANNELS] =  { -1, -1, -1, -1, -1, -1, -1, -1 };
@@ -96,7 +113,6 @@ class Multi400 {
   uint8_t last_esc = 0;
   
 };
-
 
 // Servo library compatible frontend for Pulse400: drop in replacement for Servo
 
@@ -126,13 +142,11 @@ class Servo400 {
 class Pulse400 {
   
   public:
-  int8_t attach( int8_t pin, uint16_t frequency = 400 ); // Attaches or resets refresh rate
+  int8_t attach( int8_t pin ); // Attaches or resets refresh rate
   Pulse400& detach( int8_t id_channel ); // Detaches and optionally frees timer
   Pulse400& set_pulse( int8_t id_channel, uint16_t pulse_width, bool buffer_mode = false );
   int16_t get_pulse( int8_t id_channel );
-  Pulse400& set_frequency( int8_t id_channel, uint8_t mask, bool buffer_mode = false );
-  Pulse400& set_period( uint16_t period_width = PULSE400_PERIOD_WIDTH );
-  uint8_t freq2mask( uint16_t frequency );
+  Pulse400& frequency( uint8_t freqmask, int16_t period = 2500 );
 
   static Pulse400 * instance;  
   void handleInterruptTimer( void );
@@ -162,7 +176,7 @@ class Pulse400 {
   uint8_t queue[2][PULSE400_MAX_CHANNELS + 1] = { { PULSE400_END_FLAG }, { PULSE400_END_FLAG } };
   
   volatile uint8_t * qptr;
-#ifdef __AVR_ATmega328P__
+#if defined( __AVR_ATmega328P__ ) || defined( __TEENSY_3X__ )
   volatile uint8_t pins_high_portb, pins_high_portc, pins_high_portd;
 #endif
 };
