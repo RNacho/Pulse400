@@ -78,10 +78,8 @@ class Esc400 {
   
   public:
   Esc400& begin( int8_t pin );
-  Esc400& frequency( uint16_t v );
   Esc400& speed( uint16_t v ); 
   int16_t speed( void ); 
-  // WARNING the period argument applies to all active PWM streams
   Esc400& range( uint16_t min, uint16_t max ); 
   Esc400& end( void );
   
@@ -121,7 +119,6 @@ class Servo400 {
   public:
   uint8_t attach(int pin );           // attach the given pin to the next free channel, sets pinMode, returns channel number or 0 if failure
   uint8_t attach(int pin, int min, int max ); // as above but also sets min and max values for writes. 
-  void frequency( uint16_t v );       // Set PWM frequency to 0, 50 (default), 100, 200 or 400 HZ
   void detach();
   void write(int value);             // if value is < 200 its treated as an angle, otherwise as pulse width in microseconds 
   void writeMicroseconds(int value); // Write pulse width in microseconds 
