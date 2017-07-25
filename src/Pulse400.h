@@ -133,9 +133,7 @@ class Pulse400 {
   Pulse400& set_frequency( int8_t id_channel, uint8_t mask, bool buffer_mode = false );
   Pulse400& set_period( uint16_t period_width = PULSE400_PERIOD_WIDTH );
   uint8_t freq2mask( uint16_t frequency );
-  Pulse400& sync();
 
-  // Not meant to be accessed from sketches:
   static Pulse400 * instance;  
   void handleInterruptTimer( void );
     
@@ -164,5 +162,8 @@ class Pulse400 {
   uint8_t queue[2][PULSE400_MAX_CHANNELS + 1] = { { PULSE400_END_FLAG }, { PULSE400_END_FLAG } };
   
   volatile uint8_t * qptr;
+#ifdef __AVR_ATmega328P__
+  volatile uint8_t pins_high_portb, pins_high_portc, pins_high_portd;
+#endif
 };
 

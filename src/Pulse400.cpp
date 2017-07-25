@@ -107,16 +107,16 @@ Pulse400& Pulse400::set_period( uint16_t period_width ) {
 }
 
 void Pulse400::bubble_sort_on_pulse_width( uint8_t list[], uint8_t size ) {
-    int temp;
-    for ( uint8_t i = 0; i < size; i++ ) {
-        for ( uint8_t j = size - 1; j > i; j-- ) {
-            if ( channel[list[j]].pulse_width < channel[list[ j - 1 ]].pulse_width ) {
-                temp = list[ j - 1 ];
-                list[ j - 1 ]=list[ j ];
-                list[ j ]=temp;
-            }
-        }
+  int temp;
+  for ( uint8_t i = 0; i < size; i++ ) {
+    for ( uint8_t j = size - 1; j > i; j-- ) {
+      if ( channel[list[j]].pulse_width < channel[list[ j - 1 ]].pulse_width ) {
+        temp = list[ j - 1 ];
+        list[ j - 1 ]=list[ j ];
+        list[ j ]=temp;
+      }
     }
+  }
 }
 
 // Update/refresh the entire queue 
@@ -130,9 +130,22 @@ void Pulse400::update_queue( int8_t id_queue ) {
     }
   }
   queue[id_queue][queue_cnt] = PULSE400_END_FLAG; // Sentinel value
-  
-  // FIXME FIXME FIXME
   bubble_sort_on_pulse_width( queue[id_queue], queue_cnt );
+#ifdef __AVR_ATmega328P__
+  pins_high_portb = 0; // Prepare pin high bitmaps for UNO optimization
+  pins_high_portc = 0;
+  pins_high_portd = 0;
+  for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
+    if ( channel[ch].pin > -1 ) {
+      if ( channel[ch].pin < 8 )
+        pins_high_portd |= 1UL << ( channel[ch].pin );
+      else if ( channel[ch].pin < 14 )      
+        pins_high_portb |= 1UL << ( channel[ch].pin - 8 );
+      else 
+        pins_high_portc |= 1UL << ( channel[ch].pin - 14 );        
+    }
+  }
+#endif
 }
 
 // Update one entry in the queue
@@ -194,21 +207,6 @@ void ESC400PWM_ISR( void ) {
   Pulse400::instance->handleInterruptTimer();
 }
 
-Pulse400& Pulse400::sync() { // There's a 9 ms delay on this! Can't get it to work for now...
-  cli();
-  qptr = NULL;
-  period_counter = 7;
-  sei();
-#ifdef PULSE400_USE_INTERVALTIMER  
-  esc_timer.begin( ESC400PWM_ISR, 1 );
-#else 
-  Timer1.initialize( 0 ); 
-  Timer1.restart(); 
-  Timer1.setPeriod( 0 ); 
-#endif
-  return *this;
-}
-
 void Pulse400::timer_start( void ) {
   qptr = NULL;
   instance = this;
@@ -236,13 +234,18 @@ void Pulse400::handleInterruptTimer( void ) {
       switch_queue = false;
       active_queue = active_queue ^ 1;
     }
-    // TODO bring back just the pins HIGH bitmap for UNO's? (one 32 bit record)
     if ( ( 1 << ( ++period_counter & B0000111 ) ) & period_mask ) {
+#ifdef __AVR_ATmega328P__
+      PORTB |= pins_high_portb; // Arduino UNO optimization: flip pins per bank
+      PORTC |= pins_high_portc;
+      PORTD |= pins_high_portd;
+#else
       qptr = queue[active_queue]; // Point the queue pointer at the start of the queue
       while( *qptr != PULSE400_END_FLAG ) {
         digitalWrite( channel[*qptr].pin, HIGH );   
         qptr++;
       }
+#endif      
     }
     qptr = queue[active_queue];
     next_interval = channel[*qptr].pulse_width;
