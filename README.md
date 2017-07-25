@@ -187,6 +187,8 @@ The example code and method descriptions are taken from the Servo library docume
 
 ### The Pulse400 class ###
 
+The Pulse400 class is the actual PWM generator that is used by the Esc400, Multi400 and Servo400 front-end classes. A (singleton) object named ```pulse400``` is automatically instantiated when Pulse400.h is included.
+
 | Method | Description | 
 |-----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | attach( int8_t pin ) | Attaches the specified pin and allocates a PWM channel for it. Returns a channel id or -1 on failure. |
@@ -194,7 +196,6 @@ The example code and method descriptions are taken from the Servo library docume
 | set_pulse( int8_t id_channel, uint16_t pulse_width, bool buffer_mode = false) | Sets the pulse width for the specified channel. Set buffer_mode to true to delay updating the PWM generator. When sending a number of updates, set buffer_mode on all but the last update. |
 | get_pulse( int8_t id_channel ) | Returns the current pulse for the specified channel. |
 | frequency( uint8_t freqmask, int16_t period = 2500 ) | Set the frquency and period length for the Pulse400 PWM generator. |
-
 
 ### Beyond 400 Hz ###
 
