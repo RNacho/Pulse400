@@ -236,14 +236,13 @@ void Pulse400::handleInterruptTimer( void ) {
       switch_queue = false;
       active_queue = active_queue ^ 1;
     }
-    qptr = queue[active_queue]; // Point the queue pointer at the start of the queue
-    period_counter = ++period_counter & B00000111;
-    while( *qptr != PULSE400_END_FLAG ) {
-      channel_struct_t *c = &channel[*qptr];
-      if ( ( 1 << ( period_counter & B0000111 ) ) & period_mask ) {
-        digitalWrite( c->pin, HIGH );   
+    // TODO bring back just the pins HIGH bitmap for UNO's? (one 32 bit record)
+    if ( ( 1 << ( ++period_counter & B0000111 ) ) & period_mask ) {
+      qptr = queue[active_queue]; // Point the queue pointer at the start of the queue
+      while( *qptr != PULSE400_END_FLAG ) {
+        digitalWrite( channel[*qptr].pin, HIGH );   
+        qptr++;
       }
-      qptr++;
     }
     qptr = queue[active_queue];
     next_interval = channel[*qptr].pulse_width;
