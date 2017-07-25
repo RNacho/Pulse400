@@ -195,7 +195,7 @@ The Pulse400 class is the actual PWM generator that is used by the Esc400, Multi
 | detach( int_8 id_channel ) | Detaches the pin and frees the channel |
 | set_pulse( int8_t id_channel, uint16_t pulse_width, bool buffer_mode = false) | Sets the pulse width for the specified channel. Set buffer_mode to true to delay updating the PWM generator. When sending a number of updates, set buffer_mode on all but the last update. |
 | get_pulse( int8_t id_channel ) | Returns the current pulse for the specified channel. |
-| frequency( uint8_t freqmask, int16_t period = 2500 ) | Set the frquency and period length for the Pulse400 PWM generator. |
+| frequency( uint8_t freqmask, int16_t period = 2500 ) | Set the frequency and period length for the Pulse400 PWM generator. The frequency can be one of PULSE400_0HZ, PULSE400_50HZ, PULSE400_100HZ, PULSE400_200HZ and PULSE400_400HZ.  |
 
 ### Beyond 400 Hz ###
 
