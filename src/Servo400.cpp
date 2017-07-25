@@ -4,7 +4,6 @@
 
 uint8_t Servo400::attach(int pin ) {
   id_channel = pulse400.attach( pin );
-  pulse400.set_frequency( id_channel, PULSE400_50HZ );
   return id_channel + 1;  
 } 
 
@@ -38,14 +37,13 @@ void Servo400::frequency( uint16_t frequency ) {
 // Write pulse width in microseconds 
 
 void Servo400::writeMicroseconds(int value) {
-  current_pulse = value;
   pulse400.set_pulse( id_channel, value );
 }
 
 // returns current pulse width in microseconds for this servo
 
 int Servo400::readMicroseconds() {
-  return current_pulse;
+  return id_channel == -1 ? -1 : map( pulse400.get_pulse( id_channel ), min, max, 1, 1000 );
 }
           
 // if value is < 200 it's treated as an angle, otherwise as pulse width in microseconds 
@@ -61,5 +59,5 @@ void Servo400::write(int value) {
 // returns current pulse width as an angle between 0 and 180 degrees
             
 int Servo400::read() {
-  return map( current_pulse, min, max, 0, 180 );
+  return map( readMicroseconds(), min, max, 0, 180 );
 }                        

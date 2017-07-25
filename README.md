@@ -1,6 +1,7 @@
 ## Pulse400 - High speed 400 Hz Arduino ESC & Servo library. ##
 
 ### TODO ###
+* Document that frequency is now global & max 8 channels
 * Overclocking documentation 'Beyond 400 Hz'
 * Add Saleae logic screenshots
 * Add a ToC

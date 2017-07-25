@@ -64,10 +64,9 @@ class Esc400 {
   // WARNING the period argument applies to all active PWM streams
   Esc400& range( uint16_t min, uint16_t max, uint16_t period = PULSE400_PERIOD_WIDTH ); 
   Esc400& end( void );
-  int16_t id_channel = -1;
   
   private:
-  uint16_t current_speed = 0; 
+  int16_t id_channel = -1;
   uint16_t min = 1000;
   uint16_t max = 2000;
   
@@ -116,7 +115,6 @@ class Servo400 {
   
   private:
   int16_t id_channel = -1;
-  uint16_t current_pulse = 0; 
   uint16_t min = 544;
   uint16_t max = 2400;
   

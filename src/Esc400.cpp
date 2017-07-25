@@ -11,13 +11,12 @@ Esc400& Esc400::frequency( uint16_t frequency ) {
 }
 
 Esc400& Esc400::speed( uint16_t v ) {
-  current_speed = constrain( v, 0, 1000 );
-  pulse400.set_pulse( id_channel, map( current_speed, 0, 1000, min, max ) );
+  pulse400.set_pulse( id_channel, map( constrain( v, 0, 1000 ), 0, 1000, min, max ) );
   return *this;
 }
 
 int16_t Esc400::speed() {
-  return id_channel == -1 ? -1 : current_speed;
+  return id_channel == -1 ? -1 : map( pulse400.get_pulse( id_channel ), min, max, 1, 1000 );
 }
 
 Esc400& Esc400::range( uint16_t min, uint16_t max, uint16_t period ) {
