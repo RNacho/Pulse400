@@ -139,7 +139,7 @@ class Servo400 {
 class Pulse400 {
   
   public:
-  int8_t attach( int8_t pin ); // Attaches or resets refresh rate
+  int8_t attach( int8_t pin ); // Attaches pin
   Pulse400& detach( int8_t id_channel ); // Detaches and optionally frees timer
   Pulse400& set_pulse( int8_t id_channel, uint16_t pulse_width, bool buffer_mode = false );
   int16_t get_pulse( int8_t id_channel );
