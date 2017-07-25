@@ -230,7 +230,6 @@ void Pulse400::timer_stop( void ) {
 }
 
 void Pulse400::handleInterruptTimer( void ) {
-  PINHIGHD( 7 );
   int16_t next_interval = 0;   
   if ( qptr == NULL || *qptr == PULSE400_END_FLAG ) { 
     if ( switch_queue ) {
@@ -257,7 +256,6 @@ void Pulse400::handleInterruptTimer( void ) {
     if ( *qptr == PULSE400_END_FLAG ) 
       next_interval = period_width - previous_pulse_width;
   }  
-  PINLOWD( 7 );
 #ifdef PULSE400_USE_INTERVALTIMER  
   esc_timer.begin( ESC400PWM_ISR, next_interval );
 #else 
