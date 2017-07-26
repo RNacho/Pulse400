@@ -3,29 +3,23 @@
 Pulse400 pulse400; // Global object
 Pulse400 * Pulse400::instance; // Only one instance allowed (singleton)
 
-int8_t Pulse400::attach( int8_t pin ) {
-  int id_channel = channel_find( pin ); 
-  if ( id_channel > -1 ) {
-    pinMode( pin, OUTPUT );
-    digitalWrite( pin, LOW );
-    int count = channel_count();
-    channel[id_channel].pin = pin;
-    channel[id_channel].pulse_width = PULSE400_DEFAULT_PULSE;
-    cli();
-    if ( switch_queue ) { // Queue switch in progress, abort while ints are off
-      switch_queue = false;
-      sei();
-      update_queue( active_queue ^ 1 );
-    } else {
-      sei();
-      update_queue( active_queue ^ 1 );      
+int8_t Pulse400::attach( int8_t pin, int8_t force_id /* = -1 */ ) {
+  if ( pin > -1 ) {
+    int id_channel = force_id > -1 ? force_id : channel_find( pin ); 
+    if ( id_channel > -1 ) {
+      pinMode( pin, OUTPUT );
+      digitalWrite( pin, LOW );
+      int count = channel_count();
+      channel[id_channel].pin = pin;
+      channel[id_channel].pulse_width = PULSE400_DEFAULT_PULSE;
+      update();
+      if ( count == 0 ) { // Start the timer as soon as the first channel is created
+        timer_start(); 
+      }
     }
-    switch_queue = true;
-    if ( count == 0 ) { // Start the timer as soon as the first channel is created
-      timer_start(); 
-    }
+    return id_channel;
   }
-  return id_channel;
+  return -1;
 }
 
 Pulse400& Pulse400::detach( int8_t id_channel ) {
@@ -34,47 +28,38 @@ Pulse400& Pulse400::detach( int8_t id_channel ) {
     if ( channel_count() == 0 ) {
       timer_stop();
     } else {
-      cli();
-      if ( switch_queue ) { // Queue switch in progress, abort while ints are off
-        switch_queue = false;
-        sei();
-        update_queue( active_queue ^ 1 );
-      } else {
-        sei();
-        update_queue( active_queue ^ 1 );
-      }
-      switch_queue = true;
+      update();
     }
   }
   return *this;
 }
 
-Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pulse_width, bool buffer_mode ) {
-  if ( id_channel != -1 ) {
+Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pulse_width, bool no_update ) {
+  if ( id_channel > -1 && channel[id_channel].pin > -1 ) {
     pulse_width = constrain( pulse_width, 1, period_width - 1 );
     if ( channel[id_channel].pulse_width != pulse_width ) {
       channel[id_channel].pulse_width = pulse_width;
-      if ( buffer_mode ) {
-        buffer_cnt++;
+      if ( no_update ) {
+        update_cnt++;
       } else {
-        if ( buffer_cnt ) { // Multiple updates pending
+        if ( update_cnt ) { // Multiple updates pending
           switch_queue = false;
-          update_queue( active_queue ^ 1 ); // Rebuild the whole queue         
+          update(); // Rebuild the whole queue         
         } else { // Single update pending
           cli(); // Disable interrupts while aborting the pending queue switch
           if ( switch_queue ) { // Queue switch in progress, abort while ints are off        
             switch_queue = false;
             sei(); // Re-enable interrupts
             // And update the non-active queue using itself as a source
-            update_queue( active_queue ^ 1, active_queue ^ 1, id_channel, pulse_width );  
+            update_queue_entry( active_queue ^ 1, active_queue ^ 1, id_channel, pulse_width );  
           } else {
             sei(); // Re-enable interrupts
             // Update the non-active queue using the active queue as a source
-            update_queue( active_queue, active_queue ^ 1, id_channel, pulse_width );        
+            update_queue_entry( active_queue, active_queue ^ 1, id_channel, pulse_width );        
           }
+          switch_queue = true; // Set the switch_queue flag (again)
         }
-        switch_queue = true; // Set the switch_queue flag (again)
-        buffer_cnt = 0;
+        update_cnt = 0;
       }
     }
   }
@@ -104,10 +89,12 @@ void Pulse400::bubble_sort_on_pulse_width( uint8_t list[], uint8_t size ) {
   }
 }
 
-// Update/refresh the entire queue 
+// Update/refresh the entire queue and set the switch flag 
 
-void Pulse400::update_queue( int8_t id_queue ) {
+Pulse400& Pulse400::update() {
+  switch_queue = false;
   int queue_cnt = 0;
+  int id_queue = active_queue ^ 1;
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
     if ( channel[ch].pin > -1 ) {
       queue[id_queue][queue_cnt] = ch;
@@ -130,12 +117,14 @@ void Pulse400::update_queue( int8_t id_queue ) {
         pins_high_portc |= 1UL << ( channel[ch].pin - 14 );        
     }
   }
+  switch_queue = true;
 #endif
+  return *this;
 }
 
 // Update one entry in the queue
 
-void Pulse400::update_queue( int8_t id_queue_src, int8_t id_queue_dst, int8_t id_channel, uint16_t pulse_width ) {
+void Pulse400::update_queue_entry( int8_t id_queue_src, int8_t id_queue_dst, int8_t id_channel, uint16_t pulse_width ) {
   int loc = 0; 
   int cnt = 0;
   uint8_t tmp;

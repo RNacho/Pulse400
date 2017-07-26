@@ -103,7 +103,7 @@ class Multi400 {
   public:
   Multi400& begin( int8_t pin0 = -1, int8_t pin1 = -1, int8_t pin2 = -1, int8_t pin3 = -1, int8_t pin4 = -1, int8_t pin5 = -1, int8_t pin6 = -1, int8_t pin7 = -1 );
   Multi400& setSpeed( int16_t v0, int16_t v1 = -1, int16_t v2 = -1, int16_t v3 = -1, int16_t v4 = -1, int16_t v5 = -1 , int16_t v6 = -1, int16_t v7 = -1 ); 
-  Multi400& speed( uint8_t no, int16_t v, bool buffer_mode = false );
+  Multi400& speed( uint8_t no, int16_t v, bool no_update = false );
   int16_t speed( uint8_t no );
   Multi400& off( void );
   Multi400& range( uint16_t min, uint16_t max ); 
@@ -114,7 +114,6 @@ class Multi400 {
   private:
   uint16_t min = 1000;
   uint16_t max = 2000;
-  uint8_t last_esc = 0;
   
 };
 
@@ -145,10 +144,11 @@ class Servo400 {
 class Pulse400 {
   
   public:
-  int8_t attach( int8_t pin ); // Attaches pin
+  int8_t attach( int8_t pin, int8_t force_id = -1 ); // Attaches pin
   Pulse400& detach( int8_t id_channel ); // Detaches and optionally frees timer
-  Pulse400& set_pulse( int8_t id_channel, uint16_t pulse_width, bool buffer_mode = false );
+  Pulse400& set_pulse( int8_t id_channel, uint16_t pulse_width, bool no_update = false );
   int16_t get_pulse( int8_t id_channel );
+  Pulse400& update( void );
   Pulse400& frequency( uint8_t freqmask, int16_t period = 2500 );
 
   static Pulse400 * instance;  
@@ -159,8 +159,7 @@ class Pulse400 {
   int channel_find( int pin = -1 ); // pin = -1 return first free channel, returns -1 if none found
   void timer_start( void );
   void timer_stop( void );
-  void update_queue( int8_t id_queue_src, int8_t id_queue_dst, int8_t id_channel, uint16_t pulse_width );
-  void update_queue( int8_t id_queue );
+  void update_queue_entry( int8_t id_queue_src, int8_t id_queue_dst, int8_t id_channel, uint16_t pulse_width );
   void init_reg_bitmaps( int8_t id_queue );
   void bubble_sort_on_pulse_width( uint8_t list[], uint8_t size );
 #ifdef PULSE400_USE_INTERVALTIMER
@@ -171,7 +170,7 @@ class Pulse400 {
   volatile int8_t period_counter;
   volatile int8_t active_queue = 1;
   volatile bool switch_queue;
-  volatile uint8_t buffer_cnt = 0;
+  volatile uint8_t update_cnt = 0;
   volatile uint16_t period_width = PULSE400_PERIOD_WIDTH;
   volatile int8_t period_mask = PULSE400_400HZ; 
 
