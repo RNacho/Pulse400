@@ -134,7 +134,7 @@ void loop() {
 
 ### The Servo400 class ###
 
-The Servo400 class strives to be an exact copy of the standard Arduino Servo class. The default PWM frequency is 50Hz, but that can be changed with the (new) ```frequency()``` method.
+The Servo400 class strives to be an exact copy of the standard Arduino Servo class. The default PWM frequency is 400 Hz, but that can be changed with the ```pulse400.frequency()``` method.
 
 | Method | Description | 
 |-----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -168,6 +168,7 @@ int pos = 0;    // variable to store the servo position
 
 void setup() {
   myservo.attach(9);  // attaches the servo on pin 9 to the servo object
+  pulse400.frequency( PULSE400_50HZ );  // Slow it down to the 'standard' 50 Hz
 }
 
 void loop() {
@@ -191,9 +192,9 @@ The Pulse400 class is the actual PWM generator that is used by the Esc400, Multi
 
 | Method | Description | 
 |-----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| attach( int8_t pin ) | Attaches the specified pin and allocates a PWM channel for it. Returns a channel id or -1 on failure. |
+| attach( int8_t pin ) | Attaches the specified pin and allocates a PWM channel for it. Returns a channel id or -1 on failure (no more channels available). |
 | detach( int_8 id_channel ) | Detaches the pin and frees the channel |
-| set_pulse( int8_t id_channel, uint16_t pulse_width, bool buffer_mode = false) | Sets the pulse width for the specified channel. Set buffer_mode to true to delay updating the PWM generator. When sending a number of updates, set buffer_mode on all but the last update. |
+| set_pulse( int8_t id_channel, uint16_t pulse_width, bool buffer_mode = false) | Sets the pulse width for the specified channel. Set buffer_mode to true to delay updating the PWM generator. When sending a number of updates, set buffer_mode on all but the last update. The pulse_width argument takes values from 1 to period length (normally 2500). |
 | get_pulse( int8_t id_channel ) | Returns the current pulse for the specified channel. |
 | frequency( uint8_t freqmask, int16_t period = 2500 ) | Set the frequency and period length for the Pulse400 PWM generator. The frequency can be one of PULSE400_0HZ, PULSE400_50HZ, PULSE400_100HZ, PULSE400_200HZ and PULSE400_400HZ.  |
 
