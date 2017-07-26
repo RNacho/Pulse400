@@ -227,7 +227,7 @@ void Pulse400::handleInterruptTimer( void ) {
 #else
       qptr = queue[active_queue]; // Point the queue pointer at the start of the queue
       while( *qptr != PULSE400_END_FLAG ) {
-        digitalWrite( channel[*qptr].pin, HIGH );
+        DIGITALWRITE( channel[*qptr].pin, HIGH );
         qptr++;
       }
 #endif      
@@ -237,11 +237,7 @@ void Pulse400::handleInterruptTimer( void ) {
   } else {
     uint16_t previous_pulse_width = channel[*qptr].pulse_width;
     while ( !next_interval ) { // Process equal pulse widths in the same timer interrupt period
-#if defined( __TEENSY_3X__  )     
-      digitalWriteFast( channel[*qptr].pin, LOW );
-#else        
-      digitalWrite( channel[*qptr].pin, LOW );
-#endif    
+      DIGITALWRITE( channel[*qptr].pin, LOW );
       next_interval = channel[*( ++qptr )].pulse_width - previous_pulse_width;
     }
     if ( *qptr == PULSE400_END_FLAG ) 

@@ -8,7 +8,7 @@
 * Comparison with Servo
 * Publish on the Arduino Library Manager
 
-Generates 400 Hz PWM control pulses for servos and multicopter electronic speed controllers (ESC). By varying the pulse and period width frequencies of well over 400 Hz can be obtained (provided the attached  hardware can handle the signals). Can control 8 ESC's and/or Servo's at the same time.
+Generates 400 Hz PWM control pulses for servos and multicopter electronic speed controllers (ESC). By varying the pulse and period width frequencies of well over 400 Hz can be obtained (provided the attached  hardware can handle the signals). Can control 8 ESC's and/or Servo's at the same time out of the box but that can be inncreased or decreased by simply changing the ```PULSE400_MAX_CHANNELS``` constant in the ```Pulse400.h``` file.
 
 Provides the following front-end classes
 

@@ -53,6 +53,12 @@
   #include <TimerOne.h>
 #endif
 
+#ifdef __TEENSY_3X__
+  #define DIGITALWRITE( _pin, _value ) digitalWriteFast( _pin, _value ) 
+#else 
+  #define DIGITALWRITE( _pin, _value ) digitalWrite( _pin, _value ) 
+#endif
+
 class Esc400;
 class Servo400;
 class Pulse400;
