@@ -40,8 +40,6 @@
 
 // For Teensy 3.0/3.1/3.2/3.5/3.6/LC use Teensyduino intervalTimer
 
-// WARNING: Teensy LC doesn't work at all!!!
-
 #if defined( __TEENSY_3X__ )
   #define PULSE400_USE_INTERVALTIMER
   #define DIGITALWRITE( _pin, _value ) digitalWriteFast( _pin, _value ) 

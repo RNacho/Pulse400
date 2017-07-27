@@ -4,8 +4,8 @@ Pulse400 pulse400; // Global object
 Pulse400 * Pulse400::instance; // Only one instance allowed (singleton)
 
 #ifdef __TEENSY_3X__
-static struct { char port; uint8_t bit; } teensy_pins[] = { // A, B, C, D ports: LC could be different!
-  /* 0  */ 'B', 16, // PIN kolom mag weg!
+static struct { char port; uint8_t bit; } teensy_pins[] = { // A, B, C, D ports: LC port 3 & 4 differ
+  /* 0  */ 'B', 16, // Pin 0 & 1 won't work (would require 32 bit masks)
   /* 1  */ 'B', 17,
   /* 2  */ 'D',  0,
 #ifdef __TEENSY_LC__ 
@@ -254,7 +254,7 @@ void Pulse400::timer_start( void ) {
   qctl.ptr = 0;
   instance = this;
 #ifdef PULSE400_USE_INTERVALTIMER  
-  esc_timer.begin( ESC400PWM_ISR, 2 ); // interval 1 doesn't work on Teensy LC
+  esc_timer.begin( ESC400PWM_ISR, 2 ); // interval 1 doesn't seem to work on Teensy LC
 #else 
   Timer1.initialize( 1 ); 
   Timer1.attachInterrupt( ESC400PWM_ISR );
