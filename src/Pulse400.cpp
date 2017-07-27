@@ -3,10 +3,17 @@
 Pulse400 pulse400; // Global object
 Pulse400 * Pulse400::instance; // Only one instance allowed (singleton)
 
+Pulse400::Pulse400( void ) {
+  for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
+    channel[ch].pin = PULSE400_UNUSED;
+    channel[ch].pulse_width = PULSE400_DEFAULT_PULSE;
+  }  
+}
+
 int8_t Pulse400::attach( int8_t pin, int8_t force_id /* = -1 */ ) {
-  if ( pin > -1 ) {
+  if ( pin != PULSE400_UNUSED ) {
     int id_channel = force_id > -1 ? force_id : channel_find( pin ); 
-    if ( id_channel > -1 ) {
+    if ( id_channel != -1 ) {
       pinMode( pin, OUTPUT );
       DIGITALWRITE( pin, LOW );
       int count = channel_count();
@@ -23,8 +30,8 @@ int8_t Pulse400::attach( int8_t pin, int8_t force_id /* = -1 */ ) {
 }
 
 Pulse400& Pulse400::detach( int8_t id_channel ) {
-  if ( id_channel != -1 ) {
-    channel[id_channel].pin = -1;
+  if ( id_channel != PULSE400_UNUSED ) {
+    channel[id_channel].pin = PULSE400_UNUSED;
     if ( channel_count() == 0 ) {
       timer_stop();
     } else {
@@ -35,7 +42,7 @@ Pulse400& Pulse400::detach( int8_t id_channel ) {
 }
 
 Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pulse_width, bool no_update ) {
-  if ( id_channel > -1 && channel[id_channel].pin > -1 ) {
+  if ( id_channel != PULSE400_UNUSED && channel[id_channel].pin != PULSE400_UNUSED ) {
     pulse_width = constrain( pulse_width, 1, period_width - 1 );
     if ( channel[id_channel].pulse_width != pulse_width ) {
       channel[id_channel].pulse_width = pulse_width;
@@ -67,7 +74,7 @@ Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pulse_width, bool no_
 }
 
 int16_t Pulse400::get_pulse( int8_t id_channel ) {
-  return id_channel > -1 ? channel[id_channel].pulse_width : -1;
+  return id_channel != PULSE400_UNUSED ? channel[id_channel].pulse_width : -1;
 }
 
 Pulse400& Pulse400::frequency( uint16_t f ) {
@@ -95,7 +102,7 @@ Pulse400& Pulse400::update() {
   int queue_cnt = 0;
   int id_queue = active_queue ^ 1;
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
-    if ( channel[ch].pin > -1 ) {
+    if ( channel[ch].pin != PULSE400_UNUSED ) {
       queue[id_queue][queue_cnt] = ch;
       queue_cnt++;
     }
@@ -107,7 +114,7 @@ Pulse400& Pulse400::update() {
   pins_high_portc = 0;
   pins_high_portd = 0;
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
-    if ( channel[ch].pin > -1 ) {
+    if ( channel[ch].pin != PULSE400_UNUSED ) {
       if ( channel[ch].pin < 8 )
         pins_high_portd |= 1UL << ( channel[ch].pin );
       else if ( channel[ch].pin < 14 )      
@@ -153,7 +160,7 @@ void Pulse400::update_queue_entry( int8_t id_queue_src, int8_t id_queue_dst, int
 int Pulse400::channel_count( void ) {
   int result = 0;
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
-    if ( channel[ch].pin > -1 ) {
+    if ( channel[ch].pin != PULSE400_UNUSED ) {
       result++;
     }
   }
@@ -169,7 +176,7 @@ int Pulse400::channel_find( int pin ) {
     if ( channel[ch].pin == pin ) {
       result = ch;
     }
-    if ( channel[ch].pin == -1 ) {
+    if ( channel[ch].pin == PULSE400_UNUSED ) {
       last_free = ch;
     }
   }

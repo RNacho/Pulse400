@@ -13,6 +13,7 @@
 #define PULSE400_DEFAULT_PULSE 1000
 #define PULSE400_PERIOD_WIDTH 2500
 #define PULSE400_END_FLAG 127
+#define PULSE400_UNUSED 31
 
 #define MULTI400_NO_OF_CHANNELS 8
 
@@ -59,17 +60,9 @@ class Pulse400;
 extern Pulse400 pulse400;
 
 struct channel_struct_t { 
-  volatile int8_t pin = -1;
-  volatile uint16_t pulse_width;
+  volatile uint16_t pin : 5; 
+  volatile uint16_t pulse_width : 11;
 };
-
-struct pin_bitmap_struct_t {
-  union {
-    uint32_t lmask;
-    struct { uint8_t dmask, bmask, cmask, dummy; };
-  };  
-};
-
 
 // Single ESC frontend for Pulse400: use this to control each motor as a single object
 
@@ -137,6 +130,7 @@ class Servo400 {
 class Pulse400 {
   
   public:
+  Pulse400();
   int8_t attach( int8_t pin, int8_t force_id = -1 ); // Attaches pin
   Pulse400& detach( int8_t id_channel ); // Detaches and optionally frees timer
   Pulse400& set_pulse( int8_t id_channel, uint16_t pulse_width, bool no_update = false );
