@@ -8,8 +8,13 @@ static struct { char port; uint8_t bit; } teensy_pins[] = { // A, B, C, D ports:
   /* 0  */ 'B', 16, // PIN kolom mag weg!
   /* 1  */ 'B', 17,
   /* 2  */ 'D',  0,
-  /* 3  */ 'A', 12,
-  /* 4  */ 'A', 13,
+#ifdef __TEENSY_LC__ 
+  /* 3  */ 'A',  1, 
+  /* 4  */ 'A',  2, 
+#else   
+  /* 3  */ 'A', 12, 
+  /* 4  */ 'A', 13, 
+#endif  
   /* 5  */ 'D',  7,
   /* 6  */ 'D',  4,
   /* 7  */ 'D',  2,
@@ -47,7 +52,7 @@ int8_t Pulse400::attach( int8_t pin, int8_t force_id /* = -1 */ ) {
     int id_channel = force_id > -1 ? force_id : channel_find( pin ); 
     if ( id_channel != -1 ) {
       pinMode( pin, OUTPUT );
-      DIGITALWRITE( pin, LOW );
+      digitalWrite( pin, LOW ); // Using digitalWriteFast here crashes Teensy LC repeatably
       int count = channel_count();
       channel[id_channel].pin = pin;
       channel[id_channel].pw = PULSE400_DEFAULT_PULSE - PULSE400_MIN_PULSE;
@@ -246,10 +251,10 @@ void ESC400PWM_ISR( void ) {
 }
 
 void Pulse400::timer_start( void ) {
-  qctl.ptr = PULSE400_END_FLAG;
+  qctl.ptr = 0;
   instance = this;
 #ifdef PULSE400_USE_INTERVALTIMER  
-  esc_timer.begin( ESC400PWM_ISR, 1 );
+  esc_timer.begin( ESC400PWM_ISR, 2 ); // interval 1 doesn't work on Teensy LC
 #else 
   Timer1.initialize( 1 ); 
   Timer1.attachInterrupt( ESC400PWM_ISR );
@@ -278,7 +283,7 @@ void Pulse400::handleInterruptTimer( void ) {
     PORTC |= pins_high_portc; // Teensyduino AVR emulation handles this as well 
     PORTD |= pins_high_portd;
 #elif defined( __TEENSY_3X__ ) 
-    GPIOA_PDOR = pins_high_porta;  
+    GPIOA_PDOR = pins_high_porta;  // Teensy 3.X optimization
     GPIOB_PDOR = pins_high_portb;
     GPIOC_PDOR = pins_high_portc;  
     GPIOD_PDOR = pins_high_portd;  
@@ -299,7 +304,7 @@ void Pulse400::handleInterruptTimer( void ) {
     }
     if ( (*q)[qctl.ptr].id == PULSE400_END_FLAG ) 
       next_interval = period_width - previous_pw;
-  }  
+  } 
 #if defined( PULSE400_USE_INTERVALTIMER )  
   esc_timer.begin( ESC400PWM_ISR, next_interval );
 #else 
