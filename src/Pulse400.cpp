@@ -3,11 +3,14 @@
 Pulse400 pulse400; // Global object
 Pulse400 * Pulse400::instance; // Only one instance allowed (singleton)
 
+
 Pulse400::Pulse400( void ) {
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
     channel[ch].pin = PULSE400_UNUSED;
-    channel[ch].pw = PULSE400_DEFAULT_PULSE;
+    channel[ch].pw = PULSE400_DEFAULT_PULSE - PULSE400_MIN_PULSE;
   }  
+  qctl.active = 0;  
+  qctl.change = 0;  
 }
 
 int8_t Pulse400::attach( int8_t pin, int8_t force_id /* = -1 */ ) {
@@ -18,7 +21,7 @@ int8_t Pulse400::attach( int8_t pin, int8_t force_id /* = -1 */ ) {
       DIGITALWRITE( pin, LOW );
       int count = channel_count();
       channel[id_channel].pin = pin;
-      channel[id_channel].pw = PULSE400_DEFAULT_PULSE;
+      channel[id_channel].pw = PULSE400_DEFAULT_PULSE - PULSE400_MIN_PULSE;
       update();
       if ( count == 0 ) { // Start the timer as soon as the first channel is created
         timer_start(); 
@@ -43,28 +46,28 @@ Pulse400& Pulse400::detach( int8_t id_channel ) {
 
 Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pw, bool no_update ) {
   if ( id_channel != PULSE400_UNUSED && channel[id_channel].pin != PULSE400_UNUSED ) {
-    pw = constrain( pw, 1, period_width - 1 );
+    pw = constrain( pw, 1, period_width + PULSE400_MIN_PULSE - 1 ) - PULSE400_MIN_PULSE;
     if ( channel[id_channel].pw != pw ) {
       channel[id_channel].pw = pw;
       if ( no_update ) {
         update_cnt++;
       } else {
         if ( update_cnt ) { // Multiple updates pending
-          switch_queue = false;
+          qctl.change = false;
           update(); // Rebuild the whole queue         
         } else { // Single update pending
           cli(); // Disable interrupts while aborting the pending queue switch
-          if ( switch_queue ) { // Queue switch in progress, abort while ints are off        
-            switch_queue = false;
+          if ( qctl.change ) { // Queue switch in progress, abort while ints are off        
+            qctl.change = false;
             sei(); // Re-enable interrupts
             // And update the non-active queue using itself as a source
-            update_queue_entry( active_queue ^ 1, active_queue ^ 1, id_channel, pw );  
+            update_queue_entry( qctl.active ^ 1, qctl.active ^ 1, id_channel, pw );  
           } else {
             sei(); // Re-enable interrupts
             // Update the non-active queue using the active queue as a source
-            update_queue_entry( active_queue, active_queue ^ 1, id_channel, pw );        
+            update_queue_entry( qctl.active, qctl.active ^ 1, id_channel, pw );        
           }
-          switch_queue = true; // Set the switch_queue flag (again)
+          qctl.change = true; // Set the qctl.change flag (again)
         }
         update_cnt = 0;
       }
@@ -74,11 +77,11 @@ Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pw, bool no_update ) 
 }
 
 int16_t Pulse400::get_pulse( int8_t id_channel ) {
-  return id_channel != PULSE400_UNUSED ? channel[id_channel].pw : -1;
+  return id_channel != PULSE400_UNUSED ? channel[id_channel].pw + PULSE400_MIN_PULSE : -1;
 }
 
 Pulse400& Pulse400::frequency( uint16_t f ) {
-  period_width = 1000000 / f;
+  period_width = ( 1000000 / f ) - PULSE400_MIN_PULSE;
   return *this;
 }
 
@@ -98,9 +101,9 @@ void Pulse400::bubble_sort_on_pulse_width( queue_struct_t list[], uint8_t size )
 // Update/refresh the entire queue and set the switch flag 
 
 Pulse400& Pulse400::update() {
-  switch_queue = false;
+  qctl.change = false;
   int queue_cnt = 0;
-  int id_queue = active_queue ^ 1;
+  int id_queue = qctl.active ^ 1;
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
     if ( channel[ch].pin != PULSE400_UNUSED ) {
       queue[id_queue][queue_cnt].id = ch;
@@ -125,7 +128,7 @@ Pulse400& Pulse400::update() {
     }
   }
 #endif
-  switch_queue = true;
+  qctl.change = true;
   return *this;
 }
 
@@ -190,7 +193,7 @@ void ESC400PWM_ISR( void ) {
 }
 
 void Pulse400::timer_start( void ) {
-  qptr = NULL;
+  qctl.ptr = PULSE400_END_FLAG;
   instance = this;
 #ifdef PULSE400_USE_INTERVALTIMER  
   esc_timer.begin( ESC400PWM_ISR, 1 );
@@ -210,31 +213,31 @@ void Pulse400::timer_stop( void ) {
 
 void Pulse400::handleInterruptTimer( void ) {
   int16_t next_interval = 0;   
-  if ( qptr == NULL || qptr->id == PULSE400_END_FLAG ) { 
-    if ( switch_queue ) {
-      switch_queue = false;
-      active_queue = active_queue ^ 1;
+  if ( qctl.ptr == PULSE400_END_FLAG || queue[qctl.active][qctl.ptr].id == PULSE400_END_FLAG ) { 
+    if ( qctl.change ) {
+      qctl.change = false;
+      qctl.active = qctl.active ^ 1;
     }
 #if defined( __AVR_ATmega328P__ ) || defined( __TEENSY_3X__ )
     PORTB |= pins_high_portb; // Arduino UNO optimization: flip pins per bank
     PORTC |= pins_high_portc; // Teensyduino AVR emulation handles this as well 
     PORTD |= pins_high_portd;
 #else
-    qptr = queue[active_queue]; // Point the queue pointer at the start of the queue
-    while( qptr->id != PULSE400_END_FLAG ) {
-      DIGITALWRITE( channel[qptr->id].pin, HIGH );
+    qctl.ptr = 0; // Point the queue pointer at the start of the queue
+    while( queue[qctl.active][qctl.ptr].id != PULSE400_END_FLAG ) {
+      DIGITALWRITE( channel[queue[qctl.active][qctl.ptr].id].pin, HIGH );
       qptr++;
     }
 #endif      
-    qptr = queue[active_queue];
-    next_interval = qptr->pw;
+    qctl.ptr = 0;
+    next_interval = queue[qctl.active][qctl.ptr].pw + PULSE400_MIN_PULSE;
   } else {
-    uint16_t previous_pw = qptr->pw;
+    uint16_t previous_pw = queue[qctl.active][qctl.ptr].pw;
     while ( !next_interval ) { // Process equal pulse widths in the same timer interrupt period
-      DIGITALWRITE( channel[qptr->id].pin, LOW );
-      next_interval = ( ++qptr )->pw - previous_pw;
+      DIGITALWRITE( channel[queue[qctl.active][qctl.ptr].id].pin, LOW );
+      next_interval = queue[qctl.active][++qctl.ptr].pw - previous_pw;
     }
-    if ( qptr->id == PULSE400_END_FLAG ) 
+    if ( queue[qctl.active][qctl.ptr].id == PULSE400_END_FLAG ) 
       next_interval = period_width - previous_pw;
   }  
 #if defined( PULSE400_USE_INTERVALTIMER )  

@@ -12,6 +12,7 @@
 #define MULTI400_NO_OF_CHANNELS 8 // Maximum value: 31
 
 #define PULSE400_DEFAULT_PULSE 1000
+#define PULSE400_MIN_PULSE 360
 #define PULSE400_PERIOD_WIDTH 2500
 #define PULSE400_END_FLAG 31
 #define PULSE400_UNUSED 31
@@ -159,8 +160,11 @@ class Pulse400 {
 #endif  
 
   public: // Temporary! FIXME
-  volatile int8_t active_queue = 1;
-  volatile bool switch_queue;
+  struct {
+    volatile uint8_t ptr : 6;
+    volatile uint8_t active : 1;
+    volatile uint8_t change : 1;
+  } qctl;
   volatile uint8_t update_cnt = 0;
   volatile uint16_t period_width = PULSE400_PERIOD_WIDTH;
 
@@ -170,7 +174,6 @@ class Pulse400 {
     { { PULSE400_END_FLAG } } 
   };
   
-  volatile queue_struct_t * qptr;
 #if defined( __AVR_ATmega328P__ ) || defined( __TEENSY_3X__ )
   volatile uint8_t pins_high_portb, pins_high_portc, pins_high_portd;
 #endif
