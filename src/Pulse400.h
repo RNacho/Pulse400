@@ -10,13 +10,6 @@
 
 #define PULSE400_MAX_CHANNELS 8 // Maximum value 126
 
-#define PULSE400_0HZ   B00000000
-#define PULSE400_50HZ  B00000001
-#define PULSE400_100HZ B00010001
-#define PULSE400_200HZ B01010101
-#define PULSE400_400HZ B11111111
-
-#define PULSE400_NO_OF_PERIODS 8
 #define PULSE400_DEFAULT_PULSE 1000
 #define PULSE400_PERIOD_WIDTH 2500
 #define PULSE400_END_FLAG 127
@@ -149,7 +142,7 @@ class Pulse400 {
   Pulse400& set_pulse( int8_t id_channel, uint16_t pulse_width, bool no_update = false );
   int16_t get_pulse( int8_t id_channel );
   Pulse400& update( void );
-  Pulse400& frequency( uint8_t freqmask, int16_t period = 2500 );
+  Pulse400& frequency( uint16_t f );
 
   static Pulse400 * instance;  
   void handleInterruptTimer( void );
@@ -167,12 +160,10 @@ class Pulse400 {
 #endif  
 
   public: // Temporary! FIXME
-  volatile int8_t period_counter;
   volatile int8_t active_queue = 1;
   volatile bool switch_queue;
   volatile uint8_t update_cnt = 0;
   volatile uint16_t period_width = PULSE400_PERIOD_WIDTH;
-  volatile int8_t period_mask = PULSE400_400HZ; 
 
   channel_struct_t channel[PULSE400_MAX_CHANNELS];
   uint8_t queue[2][PULSE400_MAX_CHANNELS + 1] = { { PULSE400_END_FLAG }, { PULSE400_END_FLAG } };

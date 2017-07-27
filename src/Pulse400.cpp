@@ -8,7 +8,7 @@ int8_t Pulse400::attach( int8_t pin, int8_t force_id /* = -1 */ ) {
     int id_channel = force_id > -1 ? force_id : channel_find( pin ); 
     if ( id_channel > -1 ) {
       pinMode( pin, OUTPUT );
-      digitalWrite( pin, LOW );
+      DIGITALWRITE( pin, LOW );
       int count = channel_count();
       channel[id_channel].pin = pin;
       channel[id_channel].pulse_width = PULSE400_DEFAULT_PULSE;
@@ -70,9 +70,8 @@ int16_t Pulse400::get_pulse( int8_t id_channel ) {
   return id_channel > -1 ? channel[id_channel].pulse_width : -1;
 }
 
-Pulse400& Pulse400::frequency( uint8_t freqmask, int16_t period /* = 2500 */ ) {
-  period_mask = freqmask;
-  period_width = period;
+Pulse400& Pulse400::frequency( uint16_t f ) {
+  period_width = 1000000 / f;
   return *this;
 }
 
@@ -184,7 +183,6 @@ void ESC400PWM_ISR( void ) {
 void Pulse400::timer_start( void ) {
   qptr = NULL;
   instance = this;
-  period_counter = -1;
 #ifdef PULSE400_USE_INTERVALTIMER  
   esc_timer.begin( ESC400PWM_ISR, 1 );
 #else 
@@ -208,19 +206,17 @@ void Pulse400::handleInterruptTimer( void ) {
       switch_queue = false;
       active_queue = active_queue ^ 1;
     }
-    if ( ( 1 << ( ++period_counter & B0000111 ) ) & period_mask ) {
 #if defined( __AVR_ATmega328P__ ) || defined( __TEENSY_3X__ )
-      PORTB |= pins_high_portb; // Arduino UNO optimization: flip pins per bank
-      PORTC |= pins_high_portc; // Teensyduino AVR emulation handles this as well 
-      PORTD |= pins_high_portd;
+    PORTB |= pins_high_portb; // Arduino UNO optimization: flip pins per bank
+    PORTC |= pins_high_portc; // Teensyduino AVR emulation handles this as well 
+    PORTD |= pins_high_portd;
 #else
-      qptr = queue[active_queue]; // Point the queue pointer at the start of the queue
-      while( *qptr != PULSE400_END_FLAG ) {
-        DIGITALWRITE( channel[*qptr].pin, HIGH );
-        qptr++;
-      }
-#endif      
+    qptr = queue[active_queue]; // Point the queue pointer at the start of the queue
+    while( *qptr != PULSE400_END_FLAG ) {
+      DIGITALWRITE( channel[*qptr].pin, HIGH );
+      qptr++;
     }
+#endif      
     qptr = queue[active_queue];
     next_interval = channel[*qptr].pulse_width;
   } else {
