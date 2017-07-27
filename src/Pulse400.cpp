@@ -6,7 +6,7 @@ Pulse400 * Pulse400::instance; // Only one instance allowed (singleton)
 Pulse400::Pulse400( void ) {
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
     channel[ch].pin = PULSE400_UNUSED;
-    channel[ch].pulse_width = PULSE400_DEFAULT_PULSE;
+    channel[ch].pw = PULSE400_DEFAULT_PULSE;
   }  
 }
 
@@ -18,7 +18,7 @@ int8_t Pulse400::attach( int8_t pin, int8_t force_id /* = -1 */ ) {
       DIGITALWRITE( pin, LOW );
       int count = channel_count();
       channel[id_channel].pin = pin;
-      channel[id_channel].pulse_width = PULSE400_DEFAULT_PULSE;
+      channel[id_channel].pw = PULSE400_DEFAULT_PULSE;
       update();
       if ( count == 0 ) { // Start the timer as soon as the first channel is created
         timer_start(); 
@@ -41,11 +41,11 @@ Pulse400& Pulse400::detach( int8_t id_channel ) {
   return *this;
 }
 
-Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pulse_width, bool no_update ) {
+Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pw, bool no_update ) {
   if ( id_channel != PULSE400_UNUSED && channel[id_channel].pin != PULSE400_UNUSED ) {
-    pulse_width = constrain( pulse_width, 1, period_width - 1 );
-    if ( channel[id_channel].pulse_width != pulse_width ) {
-      channel[id_channel].pulse_width = pulse_width;
+    pw = constrain( pw, 1, period_width - 1 );
+    if ( channel[id_channel].pw != pw ) {
+      channel[id_channel].pw = pw;
       if ( no_update ) {
         update_cnt++;
       } else {
@@ -58,11 +58,11 @@ Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pulse_width, bool no_
             switch_queue = false;
             sei(); // Re-enable interrupts
             // And update the non-active queue using itself as a source
-            update_queue_entry( active_queue ^ 1, active_queue ^ 1, id_channel, pulse_width );  
+            update_queue_entry( active_queue ^ 1, active_queue ^ 1, id_channel, pw );  
           } else {
             sei(); // Re-enable interrupts
             // Update the non-active queue using the active queue as a source
-            update_queue_entry( active_queue, active_queue ^ 1, id_channel, pulse_width );        
+            update_queue_entry( active_queue, active_queue ^ 1, id_channel, pw );        
           }
           switch_queue = true; // Set the switch_queue flag (again)
         }
@@ -74,7 +74,7 @@ Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pulse_width, bool no_
 }
 
 int16_t Pulse400::get_pulse( int8_t id_channel ) {
-  return id_channel != PULSE400_UNUSED ? channel[id_channel].pulse_width : -1;
+  return id_channel != PULSE400_UNUSED ? channel[id_channel].pw : -1;
 }
 
 Pulse400& Pulse400::frequency( uint16_t f ) {
@@ -82,11 +82,11 @@ Pulse400& Pulse400::frequency( uint16_t f ) {
   return *this;
 }
 
-void Pulse400::bubble_sort_on_pulse_width( uint8_t list[], uint8_t size ) {
-  int temp;
+void Pulse400::bubble_sort_on_pulse_width( queue_struct_t list[], uint8_t size ) {
+  queue_struct_t temp;
   for ( uint8_t i = 0; i < size; i++ ) {
     for ( uint8_t j = size - 1; j > i; j-- ) {
-      if ( channel[list[j]].pulse_width < channel[list[ j - 1 ]].pulse_width ) {
+      if ( channel[list[j].id].pw < channel[list[ j - 1 ].id].pw ) {
         temp = list[ j - 1 ];
         list[ j - 1 ]=list[ j ];
         list[ j ]=temp;
@@ -103,11 +103,12 @@ Pulse400& Pulse400::update() {
   int id_queue = active_queue ^ 1;
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
     if ( channel[ch].pin != PULSE400_UNUSED ) {
-      queue[id_queue][queue_cnt] = ch;
+      queue[id_queue][queue_cnt].id = ch;
+      queue[id_queue][queue_cnt].pw = channel[ch].pw;
       queue_cnt++;
     }
   }
-  queue[id_queue][queue_cnt] = PULSE400_END_FLAG; // Sentinel value
+  queue[id_queue][queue_cnt].id = PULSE400_END_FLAG; // Sentinel value
   bubble_sort_on_pulse_width( queue[id_queue], queue_cnt );
 #if defined( __AVR_ATmega328P__ ) || defined( __TEENSY_3X__ )
   pins_high_portb = 0; // Prepare pin high bitmaps for UNO optimization
@@ -130,26 +131,27 @@ Pulse400& Pulse400::update() {
 
 // Update one entry in the queue
 
-void Pulse400::update_queue_entry( int8_t id_queue_src, int8_t id_queue_dst, int8_t id_channel, uint16_t pulse_width ) {
+void Pulse400::update_queue_entry( int8_t id_queue_src, int8_t id_queue_dst, int8_t id_channel, uint16_t pw ) {
   int loc = 0; 
   int cnt = 0;
-  uint8_t tmp;
-  channel[id_channel].pulse_width = pulse_width;
+  queue_struct_t tmp;
+  channel[id_channel].pw = pw;
   // Copy the ALT queue from the ACT queue and determine length & item location
-  while ( queue[id_queue_src][cnt] != PULSE400_END_FLAG ) {
-    if ( queue[id_queue_src][cnt] == id_channel ) loc = cnt;
+  while ( queue[id_queue_src][cnt].id != PULSE400_END_FLAG ) {
+    if ( queue[id_queue_src][cnt].id == id_channel ) loc = cnt;
     queue[id_queue_dst][cnt] = queue[id_queue_src][cnt]; 
     cnt++;   
   }
   queue[id_queue_dst][cnt] = queue[id_queue_src][cnt]; // Copy sentinel
+  queue[id_queue_dst][loc].pw = pw;
   // Must maintain sort orders
-  while ( loc > 0 && pulse_width < channel[queue[id_queue_dst][loc - 1]].pulse_width ) {
+  while ( loc > 0 && pw < queue[id_queue_dst][loc - 1].pw ) {
     tmp = queue[id_queue_dst][loc]; // Swap with previous entry
     queue[id_queue_dst][loc] = queue[id_queue_dst][loc - 1];
     queue[id_queue_dst][loc - 1] = tmp;    
     loc--;
   }
-  while ( loc < cnt && pulse_width > channel[queue[id_queue_dst][loc + 1]].pulse_width ) {
+  while ( loc < cnt && pw > queue[id_queue_dst][loc + 1].pw ) {
     tmp = queue[id_queue_dst][loc]; // Swap with next entry
     queue[id_queue_dst][loc] = queue[id_queue_dst][loc + 1];
     queue[id_queue_dst][loc + 1] = tmp;    
@@ -208,7 +210,7 @@ void Pulse400::timer_stop( void ) {
 
 void Pulse400::handleInterruptTimer( void ) {
   int16_t next_interval = 0;   
-  if ( qptr == NULL || *qptr == PULSE400_END_FLAG ) { 
+  if ( qptr == NULL || qptr->id == PULSE400_END_FLAG ) { 
     if ( switch_queue ) {
       switch_queue = false;
       active_queue = active_queue ^ 1;
@@ -219,21 +221,21 @@ void Pulse400::handleInterruptTimer( void ) {
     PORTD |= pins_high_portd;
 #else
     qptr = queue[active_queue]; // Point the queue pointer at the start of the queue
-    while( *qptr != PULSE400_END_FLAG ) {
-      DIGITALWRITE( channel[*qptr].pin, HIGH );
+    while( qptr->id != PULSE400_END_FLAG ) {
+      DIGITALWRITE( channel[qptr->id].pin, HIGH );
       qptr++;
     }
 #endif      
     qptr = queue[active_queue];
-    next_interval = channel[*qptr].pulse_width;
+    next_interval = qptr->pw;
   } else {
-    uint16_t previous_pulse_width = channel[*qptr].pulse_width;
+    uint16_t previous_pw = qptr->pw;
     while ( !next_interval ) { // Process equal pulse widths in the same timer interrupt period
-      DIGITALWRITE( channel[*qptr].pin, LOW );
-      next_interval = channel[*( ++qptr )].pulse_width - previous_pulse_width;
+      DIGITALWRITE( channel[qptr->id].pin, LOW );
+      next_interval = ( ++qptr )->pw - previous_pw;
     }
-    if ( *qptr == PULSE400_END_FLAG ) 
-      next_interval = period_width - previous_pulse_width;
+    if ( qptr->id == PULSE400_END_FLAG ) 
+      next_interval = period_width - previous_pw;
   }  
 #if defined( PULSE400_USE_INTERVALTIMER )  
   esc_timer.begin( ESC400PWM_ISR, next_interval );
