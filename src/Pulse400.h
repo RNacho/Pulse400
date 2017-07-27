@@ -42,17 +42,12 @@
 
 #if defined( __TEENSY_3X__ )
   #define PULSE400_USE_INTERVALTIMER
-#endif  
-
-#ifndef PULSE400_USE_INTERVALTIMER
-  #include <TimerOne.h>
-#endif
-
-#ifdef __TEENSY_3X__
   #define DIGITALWRITE( _pin, _value ) digitalWriteFast( _pin, _value ) 
-#else 
+#else  
+  #include <TimerOne.h>
   #define DIGITALWRITE( _pin, _value ) digitalWrite( _pin, _value ) 
 #endif
+
 
 class Esc400;
 class Servo400;
@@ -69,6 +64,8 @@ struct queue_struct_t {
   volatile uint16_t id : 5; 
   volatile uint16_t pw : 11;
 };
+
+typedef queue_struct_t queue_t[PULSE400_MAX_CHANNELS + 1];
 
 // Single ESC frontend for Pulse400: use this to control each motor as a single object
 
@@ -169,13 +166,18 @@ class Pulse400 {
   volatile uint16_t period_width = PULSE400_PERIOD_WIDTH;
 
   channel_struct_t channel[PULSE400_MAX_CHANNELS];
-  queue_struct_t queue[2][PULSE400_MAX_CHANNELS + 1] = { 
+  queue_t queue[2] = { 
     { { PULSE400_END_FLAG } }, 
     { { PULSE400_END_FLAG } } 
   };
   
-#if defined( __AVR_ATmega328P__ ) || defined( __TEENSY_3X__ )
+#if defined( __AVR_ATmega328P__ )
   volatile uint8_t pins_high_portb, pins_high_portc, pins_high_portd;
 #endif
+
+#ifdef __TEENSY_3X__
+  volatile uint16_t pins_high_porta, pins_high_portb, pins_high_portc, pins_high_portd;
+#endif
+
 };
 
