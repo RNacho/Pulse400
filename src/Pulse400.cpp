@@ -117,8 +117,8 @@ Pulse400& Pulse400::update() {
         pins_high_portc |= 1UL << ( channel[ch].pin - 14 );        
     }
   }
-  switch_queue = true;
 #endif
+  switch_queue = true;
   return *this;
 }
 
