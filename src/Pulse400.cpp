@@ -102,7 +102,9 @@ Pulse400& Pulse400::update() {
     }
   }
   queue[qctl.active ^ 1][queue_cnt].id = PULSE400_END_FLAG; // Sentinel value
-  sort_on_pulse_width( queue[qctl.active ^ 1], queue_cnt );
+// TODO benchmark sort algorithms  
+//  sort_on_pulse_width( queue[qctl.active ^ 1], queue_cnt );
+  quicksort_on_pulse_width( queue[qctl.active ^ 1], 0, queue_cnt - 1 );
   init_optimization( queue[qctl.active ^ 1], queue_cnt );
   qctl.change = true;
   return *this;
@@ -142,6 +144,32 @@ void Pulse400::update_queue_entry( queue_struct_t src[], queue_struct_t dst[], i
     dst[loc] = dst[loc + 1];
     dst[loc + 1] = tmp;    
     loc++;
+  }
+}
+
+ void Pulse400::quicksort_on_pulse_width( queue_struct_t list[], int first, int last ) {
+  int pivot, j, i;
+  queue_struct_t temp;
+  if ( first < last ) {
+    pivot = first;
+    i = first;
+    j = last;
+    while( i < j){
+      while ( channel[list[i].id].pw <= channel[list[pivot].id].pw && i < last )
+        i++;
+      while( channel[list[j].id].pw > channel[list[pivot].id].pw )
+        j--;
+      if ( i < j ) {
+        temp = list[i];
+        list[i] = list[j];
+        list[j] = temp;
+      }
+    }
+    temp = list[pivot];
+    list[pivot] = list[j];
+    list[j] = temp;
+    quicksort_on_pulse_width( list, first, j - 1 );
+    quicksort_on_pulse_width( list, j + 1, last );
   }
 }
 

@@ -174,6 +174,7 @@ class Pulse400 {
   void update_queue_entry( queue_struct_t src[], queue_struct_t dst[], int8_t id_channel, uint16_t pw );
   void init_optimization( queue_struct_t queue[], int8_t queue_cnt );
   void sort_on_pulse_width( queue_struct_t list[], uint8_t size );
+  void quicksort_on_pulse_width( queue_struct_t list[], int first, int last );
 #ifdef PULSE400_USE_INTERVALTIMER
   IntervalTimer timer;
 #endif  
