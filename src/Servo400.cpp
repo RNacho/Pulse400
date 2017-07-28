@@ -54,3 +54,8 @@ void Servo400::write(int value) {
 int Servo400::read() {
   return map( readMicroseconds(), min, max, 0, 180 );
 }                        
+
+void Servo400::frequency( uint16_t f ) {
+  pulse400.frequency( f );
+}
+

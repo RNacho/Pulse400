@@ -20,6 +20,11 @@ Esc400& Esc400::range( uint16_t min, uint16_t max ) {
   return *this;
 }
 
+Esc400& Esc400::frequency( uint16_t f ) {
+  pulse400.frequency( f );
+  return *this;
+}
+
 Esc400& Esc400::end( void ) {
   pulse400.detach( id_channel );
   id_channel = -1;

@@ -21,7 +21,8 @@ Multi400& Multi400::setSpeed( int16_t v0, int16_t v1, int16_t v2, int16_t v3, in
   speed( 5, v5, true );
   speed( 6, v6, true );
   speed( 7, v7, true );
-  pulse400.update();  
+  pulse400.update();
+  if ( pulse_sync ) pulse400.sync();  
   return *this;
 }
 
@@ -41,6 +42,16 @@ Multi400& Multi400::off( void ) {
     if ( id_channel[i] > -1 )
       speed( id_channel[i], 0, true );
   pulse400.update();  
+  return *this;
+}
+
+Multi400& Multi400::autosync( bool v /* = true */ ) {
+  pulse_sync = v;  
+  return *this;
+}
+
+Multi400& Multi400::frequency( uint16_t f ) {
+  pulse400.frequency( f );
   return *this;
 }
 

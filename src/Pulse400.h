@@ -80,6 +80,7 @@ class Esc400 {
   int16_t speed( void ); 
   Esc400& range( uint16_t min, uint16_t max ); 
   Esc400& end( void );
+  Esc400& frequency( uint16_t f );
   
   private:
   int16_t id_channel = -1;
@@ -100,10 +101,13 @@ class Multi400 {
   Multi400& off( void );
   Multi400& range( uint16_t min, uint16_t max ); 
   Multi400& end( void );
+  Multi400& autosync( bool v = true );
+  Multi400& frequency( uint16_t f );
 
   int8_t id_channel[MULTI400_NO_OF_CHANNELS] =  { -1, -1, -1, -1, -1, -1, -1, -1 };
   
   private:
+  bool pulse_sync;
   uint16_t min = 1000;
   uint16_t max = 2000;
   
@@ -122,6 +126,7 @@ class Servo400 {
   int read();                        // returns current pulse width as an angle between 0 and 180 degrees
   int readMicroseconds();            // returns current pulse width in microseconds for this servo (was read_us() in first release)
   bool attached(); // return true if this servo is attached, otherwise false 
+  void frequency( uint16_t f );
   
   private:
   int16_t id_channel = -1;
