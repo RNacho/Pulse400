@@ -283,10 +283,14 @@ void Pulse400::timer_stop( void ) {
 
 Pulse400& Pulse400::sync( void ) {
   cli();
-  if ( qctl.ptr == PULSE400_START_FLAG ) {
+  if ( qctl.ptr == PULSE400_START_FLAG ) { 
+#ifdef PULSE400_USE_INTERVALTIMER    
     handleTimerInterrupt();
-    sei();
+#else     
+    Timer1.restart();
+#endif  
   }
+  sei();
   return *this;
 }
 
