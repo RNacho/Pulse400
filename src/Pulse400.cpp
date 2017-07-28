@@ -149,7 +149,7 @@ void Pulse400::update_queue_entry( queue_struct_t src[], queue_struct_t dst[], i
 
  void Pulse400::quicksort_on_pulse_width( queue_struct_t list[], int first, int last ) {
   int pivot, j, i;
-  queue_struct_t temp;
+  queue_struct_t tmp;
   if ( first < last ) {
     pivot = first;
     i = first;
@@ -157,17 +157,17 @@ void Pulse400::update_queue_entry( queue_struct_t src[], queue_struct_t dst[], i
     while( i < j){
       while ( channel[list[i].id].pw <= channel[list[pivot].id].pw && i < last )
         i++;
-      while( channel[list[j].id].pw > channel[list[pivot].id].pw )
+      while ( channel[list[j].id].pw > channel[list[pivot].id].pw )
         j--;
       if ( i < j ) {
-        temp = list[i];
+        tmp = list[i];
         list[i] = list[j];
-        list[j] = temp;
+        list[j] = tmp;
       }
     }
-    temp = list[pivot];
+    tmp = list[pivot];
     list[pivot] = list[j];
-    list[j] = temp;
+    list[j] = tmp;
     quicksort_on_pulse_width( list, first, j - 1 );
     quicksort_on_pulse_width( list, j + 1, last );
   }
