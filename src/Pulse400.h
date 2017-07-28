@@ -18,6 +18,8 @@
 #define PINHIGHD( _pin ) PORTD |= ( 1 << _pin );
 #define PINLOWD( _pin ) PORTD &= ~( 1 << _pin );
 
+// Identify Teensy models
+
 #if defined(__MKL26Z64__)
   #define __TEENSY_3X__
   #define __TEENSY_LC__
@@ -39,8 +41,10 @@
 
 #if defined( __TEENSY_3X__ )
   #define PULSE400_USE_INTERVALTIMER
+  #define SET_TIMER( _interval, _func ) timer.begin( _func, _interval )
 #else  
   #include <TimerOne.h>
+  #define SET_TIMER( _interval, _func ) Timer1.setPeriod( _interval ) 
 #endif
 
 

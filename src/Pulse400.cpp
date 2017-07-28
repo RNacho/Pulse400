@@ -160,9 +160,7 @@ Pulse400& Pulse400::update() {
 #if defined( __AVR_ATmega328P__ ) && defined( PULSE400_OPTIMIZE_UNO ) 
 
 void Pulse400::init_optimization( int8_t id_queue, int8_t queue_cnt ) {
-  pins_high[0] = 0; // Prepare pin high bitmaps for UNO optimization
-  pins_high[1] = 0;
-  pins_high[2] = 0;
+  pins_high[2] = pins_high[1] = pins_high[0] = 0; 
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
     if ( channel[ch].pin != PULSE400_UNUSED ) {
       if ( channel[ch].pin < 8 )
@@ -178,10 +176,7 @@ void Pulse400::init_optimization( int8_t id_queue, int8_t queue_cnt ) {
 #elif defined( __TEENSY_3X__ ) && defined( PULSE400_OPTIMIZE_TEENSY_3X )
 
 void Pulse400::init_optimization( int8_t id_queue, int8_t queue_cnt ) {
-  pins_high[0] = 0; // Prepare pin high bitmaps for TEENSY 3.X optimization
-  pins_high[1] = 0;
-  pins_high[2] = 0;
-  pins_high[3] = 0;
+  pins_high[3] = pins_high[2] = pins_high[1] = pins_high[0] = 0; 
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
     if ( channel[ch].pin != PULSE400_UNUSED ) {
       pins_high[teensy_pins[channel[ch].pin].port] |= 1 << teensy_pins[channel[ch].pin].bit;
@@ -216,7 +211,7 @@ void Pulse400::init_optimization( int8_t id_queue, int8_t queue_cnt ) {
 
 #endif
 
-// Update one entry in the queue
+// Update a single entry in the queue
 
 void Pulse400::update_queue_entry( int8_t id_queue_src, int8_t id_queue_dst, int8_t id_channel, uint16_t pw ) {
   int loc = 0; 
@@ -272,7 +267,7 @@ int Pulse400::channel_find( int pin ) {
   return result == -1 ? last_free : result;
 }
 
-void ESC400PWM_ISR( void ) {
+void PULSE400_ISR( void ) {
   Pulse400::instance->handleTimerInterrupt();
 }
 
@@ -280,10 +275,10 @@ void Pulse400::timer_start( void ) {
   qctl.ptr = PULSE400_START_FLAG;
   instance = this;
 #ifdef PULSE400_USE_INTERVALTIMER  
-  timer.begin( ESC400PWM_ISR, 2 ); // interval 1 doesn't seem to work on Teensy LC
+  timer.begin( PULSE400_ISR, 2 ); // interval 1 doesn't seem to work on Teensy LC
 #else 
   Timer1.initialize( 1 ); 
-  Timer1.attachInterrupt( ESC400PWM_ISR );
+  Timer1.attachInterrupt( PULSE400_ISR );
 #endif    
 }
 
@@ -322,10 +317,10 @@ void Pulse400::handleTimerInterrupt( void ) {
       qctl.active = qctl.active ^ 1;
       q = &queue[qctl.active];
     }
-    PORTB |= pins_high[0]; // Arduino UNO optimization: flip pins per bank
-    PORTC |= pins_high[1]; // Teensyduino AVR emulation handles this as well 
-    PORTD |= pins_high[2];
     qctl.ptr = 0;
+    PORTB |= pins_high[0]; // Arduino UNO optimization: flip pins per bank
+    PORTC |= pins_high[1];  
+    PORTD |= pins_high[2];
     next_interval = (*q)[qctl.ptr].pw + PULSE400_MIN_PULSE;
   } else {    
     uint16_t previous_pw = (*q)[qctl.ptr].pw;
@@ -338,11 +333,7 @@ void Pulse400::handleTimerInterrupt( void ) {
       qctl.ptr = PULSE400_START_FLAG; 
     }
   } 
-#ifdef PULSE400_USE_INTERVALTIMER  
-  timer.begin( ESC400PWM_ISR, next_interval );
-#else 
-  Timer1.setPeriod( next_interval ); 
-#endif  
+  SET_TIMER( next_interval, PULSE400_ISR );
 }
 
 #elif defined( __TEENSY_3X__ ) && defined( PULSE400_OPTIMIZE_TEENSY_3X )
@@ -380,7 +371,7 @@ void Pulse400::handleTimerInterrupt( void ) {
       qctl.ptr = PULSE400_START_FLAG; 
     }
   } 
-  timer.begin( ESC400PWM_ISR, next_interval );
+  SET_TIMER( next_interval, PULSE400_ISR );
 }
 
 #else
@@ -417,11 +408,7 @@ void Pulse400::handleTimerInterrupt( void ) {
       qctl.ptr = PULSE400_START_FLAG; 
     }
   } 
-#ifdef PULSE400_USE_INTERVALTIMER  
-  timer.begin( ESC400PWM_ISR, next_interval );
-#else 
-  Timer1.setPeriod( next_interval ); 
-#endif  
+  SET_TIMER( next_interval, PULSE400_ISR );
 }
 
 #endif
