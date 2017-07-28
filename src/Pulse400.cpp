@@ -52,7 +52,7 @@ int8_t Pulse400::attach( int8_t pin, int8_t force_id /* = -1 */ ) {
     int id_channel = force_id > -1 ? force_id : channel_find( pin ); 
     if ( id_channel != -1 ) {
       pinMode( pin, OUTPUT );
-      digitalWrite( pin, LOW ); // Using digitalWriteFast here crashes Teensy LC repeatably
+      digitalWrite( pin, LOW );
       int count = channel_count();
       channel[id_channel].pin = pin;
       channel[id_channel].pw = PULSE400_DEFAULT_PULSE - PULSE400_MIN_PULSE;
@@ -349,7 +349,6 @@ void Pulse400::handleTimerInterrupt( void ) {
 // Teensy LC : ISR 1% duty cycle @8ch, set speed: 88 us
 
 FASTRUN void Pulse400::handleTimerInterrupt( void ) { 
-  PINHIGHD( 7 );
   int16_t next_interval = 0;
   queue_t * q = &queue[qctl.active];
   if ( qctl.ptr == PULSE400_START_FLAG ) { 
@@ -378,7 +377,6 @@ FASTRUN void Pulse400::handleTimerInterrupt( void ) {
     }
   } 
   SET_TIMER( next_interval, PULSE400_ISR );
-  PINLOWD( 7 );
 }
 
 #else
