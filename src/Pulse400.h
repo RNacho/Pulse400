@@ -7,6 +7,7 @@
 
 #define PULSE400_OPTIMIZE_UNO
 #define PULSE400_OPTIMIZE_TEENSY_3X
+#define PULSE400_ENABLE_ISR
 
 #define PULSE400_DEFAULT_PULSE 1000
 #define PULSE400_MIN_PULSE 360
@@ -179,11 +180,17 @@ class Pulse400 {
   queue_t queue[2] = { { { PULSE400_END_FLAG } }, { { PULSE400_END_FLAG } } };
   
 #if defined( __AVR_ATmega328P__ ) && defined( PULSE400_OPTIMIZE_UNO )
+  enum { REG_B, REG_C, REG_D };
   volatile uint8_t pins_high[3];
 #endif
 
 #if defined( __TEENSY_3X__ ) && defined( PULSE400_OPTIMIZE_TEENSY_3X )
-  volatile uint16_t pins_high[4];
+    enum { REG_A, REG_B, REG_C, REG_D };
+  #ifdef __TEENSY_LC__OFF
+    volatile uint8_t pins_high[4];
+  #else 
+    volatile uint16_t pins_high[4];
+  #endif 
 #endif
 
 };
