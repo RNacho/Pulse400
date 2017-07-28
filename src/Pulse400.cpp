@@ -281,9 +281,19 @@ void Pulse400::timer_stop( void ) {
 #endif    
 }
 
+Pulse400& Pulse400::sync( void ) {
+  cli();
+  if ( qctl.ptr == PULSE400_START_FLAG ) {
+    handleTimerInterrupt();
+    sei();
+  }
+  return *this;
+}
+
 #if defined( __AVR_ATmega328P__ )
 
 // ISR optimized for Arduino UNO (ATMega328P)
+// Arduino: ISR 4.63% duty cycle @8ch, set speed: 840 us
 
 void Pulse400::handleTimerInterrupt( void ) {
   int16_t next_interval = 0;
@@ -317,7 +327,7 @@ void Pulse400::handleTimerInterrupt( void ) {
 #endif  
 }
 
-#elif defined( __TEENSY_3Xx__ )
+#elif defined( __TEENSY_3X__ )
 
 // ISR optimized for Teensy 3.x/LC
 
@@ -360,6 +370,7 @@ void Pulse400::handleTimerInterrupt( void ) {
 // Non-optimized ISR
 
 // Teensy 3.1: ISR 0.87% duty cycle @8ch, set speed: 30 us
+// Arduino UNO: ISR 7.43% duty cycle @8ch, set speed: 804 us
 
 void Pulse400::handleTimerInterrupt( void ) {
   int16_t next_interval = 0;

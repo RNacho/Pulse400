@@ -143,6 +143,7 @@ class Pulse400 {
   int16_t get_pulse( int8_t id_channel );
   Pulse400& update( void );
   Pulse400& frequency( uint16_t f );
+  Pulse400& sync( void );
 
   static Pulse400 * instance;  
   void handleTimerInterrupt( void );
