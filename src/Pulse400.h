@@ -2,14 +2,11 @@
 
 #include <Arduino.h>
 
-/* TODO
-- Synchronized mode: 
-    set master_period_bitmap to 50HZ, then whenever an update is executed 
-    while the ISR is in dead time, reset the qptr and the period_pointer and set a new period()
-*/
-
 #define PULSE400_MAX_CHANNELS 8 // Maximum value: 31
 #define MULTI400_NO_OF_CHANNELS 8 // Maximum value: 31
+
+#define PULSE400_OPTIMIZE_UNO
+#define PULSE400_OPTIMIZE_TEENSY_3X
 
 #define PULSE400_DEFAULT_PULSE 1000
 #define PULSE400_MIN_PULSE 360
@@ -17,7 +14,6 @@
 #define PULSE400_END_FLAG 31
 #define PULSE400_START_FLAG 31
 #define PULSE400_UNUSED 31
-
 
 #define PINHIGHD( _pin ) PORTD |= ( 1 << _pin );
 #define PINLOWD( _pin ) PORTD &= ~( 1 << _pin );
@@ -50,21 +46,22 @@
 
 class Esc400;
 class Servo400;
+class Multi400;
 class Pulse400;
 
 extern Pulse400 pulse400;
 
 struct channel_struct_t { 
-  volatile uint16_t pin : 5; 
+  volatile uint16_t pin :5; 
   volatile uint16_t pw : 11;
 };
 
 struct queue_struct_t { 
   volatile uint16_t id : 5; 
   volatile uint16_t pw : 11;
-#ifdef __TEENSY_3X__  
+#if defined( __TEENSY_3X__ ) && defined( PULSE400_OPTIMIZE_TEENSY_3X )    
   volatile uint8_t cnt;
-  volatile uint16_t pins_low_port[4];
+  volatile uint16_t pins_low[4];
 #endif
 };
 
@@ -155,11 +152,11 @@ class Pulse400 {
     
   private:
   int channel_count( void );
-  int channel_find( int pin = -1 ); // pin = -1 return first free channel, returns -1 if none found
+  int channel_find( int pin = -1 ); // pin = -1 returns first free channel, returns -1 if none found
   void timer_start( void );
   void timer_stop( void );
   void update_queue_entry( int8_t id_queue_src, int8_t id_queue_dst, int8_t id_channel, uint16_t pulse_width );
-  void init_reg_bitmaps( int8_t id_queue );
+  void init_optimization( int8_t id_queue, int8_t queue_cnt );
   void bubble_sort_on_pulse_width( queue_struct_t list[], uint8_t size );
 #ifdef PULSE400_USE_INTERVALTIMER
   IntervalTimer timer;
@@ -175,19 +172,15 @@ class Pulse400 {
   volatile uint16_t period_width = PULSE400_PERIOD_WIDTH;
 
   channel_struct_t channel[PULSE400_MAX_CHANNELS];
-  queue_t queue[2] = { 
-    { { PULSE400_END_FLAG } }, 
-    { { PULSE400_END_FLAG } } 
-  };
+  queue_t queue[2] = { { { PULSE400_END_FLAG } }, { { PULSE400_END_FLAG } } };
   
-#if defined( __AVR_ATmega328P__ )
-  volatile uint8_t pins_high_portb, pins_high_portc, pins_high_portd;
+#if defined( __AVR_ATmega328P__ ) && defined( PULSE400_OPTIMIZE_UNO )
+  volatile uint8_t pins_high[3];
 #endif
 
-#ifdef __TEENSY_3X__
-  volatile uint16_t pins_high_port[4];
+#if defined( __TEENSY_3X__ ) && defined( PULSE400_OPTIMIZE_TEENSY_3X )
+  volatile uint16_t pins_high[4];
 #endif
 
-  volatile int test_flag = 0;
 };
 
