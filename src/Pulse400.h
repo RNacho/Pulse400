@@ -171,7 +171,7 @@ class Pulse400 {
   int channel_find( int pin = -1 ); // pin = -1 returns first free channel, returns -1 if none found
   void timer_start( void );
   void timer_stop( void );
-  void update_queue_entry( int8_t id_queue_src, int8_t id_queue_dst, int8_t id_channel, uint16_t pulse_width );
+  void update_queue_entry( queue_struct_t src[], queue_struct_t dst[], int8_t id_channel, uint16_t pw );
   void init_optimization( queue_struct_t queue[], int8_t queue_cnt );
   void sort_on_pulse_width( queue_struct_t list[], uint8_t size );
 #ifdef PULSE400_USE_INTERVALTIMER

@@ -64,11 +64,11 @@ Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pw, bool no_update ) 
             qctl.change = false;
             sei(); // Re-enable interrupts
             // And update the non-active queue using itself as a source
-            update_queue_entry( qctl.active ^ 1, qctl.active ^ 1, id_channel, pw );  
+            update_queue_entry( queue[qctl.active ^ 1], queue[qctl.active ^ 1], id_channel, pw );  
           } else {
             sei(); // Re-enable interrupts
             // Update the non-active queue using the active queue as a source
-            update_queue_entry( qctl.active, qctl.active ^ 1, id_channel, pw );        
+            update_queue_entry( queue[qctl.active], queue[qctl.active ^ 1], id_channel, pw );        
           }
 #endif          
           qctl.change = true; // Set the qctl.change flag (again)
@@ -117,30 +117,30 @@ void Pulse400::init_optimization( queue_struct_t queue[], int8_t queue_cnt ) {
 
 // Update a single entry in the queue
 
-void Pulse400::update_queue_entry( int8_t id_queue_src, int8_t id_queue_dst, int8_t id_channel, uint16_t pw ) {
+void Pulse400::update_queue_entry( queue_struct_t src[], queue_struct_t dst[], int8_t id_channel, uint16_t pw ) {
   int loc = 0; 
   int cnt = 0;
   queue_struct_t tmp;
   channel[id_channel].pw = pw;
   // Copy the ALT queue from the ACT queue and determine length & item location
-  while ( queue[id_queue_src][cnt].id != PULSE400_END_FLAG ) {
-    if ( queue[id_queue_src][cnt].id == id_channel ) loc = cnt;
-    queue[id_queue_dst][cnt] = queue[id_queue_src][cnt]; 
+  while ( src[cnt].id != PULSE400_END_FLAG ) {
+    if ( src[cnt].id == id_channel ) loc = cnt;
+    dst[cnt] = src[cnt]; 
     cnt++;   
   }
-  queue[id_queue_dst][cnt] = queue[id_queue_src][cnt]; // Copy sentinel
-  queue[id_queue_dst][loc].pw = pw;
+  dst[cnt] = src[cnt]; // Copy sentinel
+  dst[loc].pw = pw;
   // Must maintain sort orders
-  while ( loc > 0 && pw < queue[id_queue_dst][loc - 1].pw ) {
-    tmp = queue[id_queue_dst][loc]; // Swap with previous entry
-    queue[id_queue_dst][loc] = queue[id_queue_dst][loc - 1];
-    queue[id_queue_dst][loc - 1] = tmp;    
+  while ( loc > 0 && pw < dst[loc - 1].pw ) {
+    tmp = dst[loc]; // Swap with previous entry
+    dst[loc] = dst[loc - 1];
+    dst[loc - 1] = tmp;    
     loc--;
   }
-  while ( loc < cnt && pw > queue[id_queue_dst][loc + 1].pw ) {
-    tmp = queue[id_queue_dst][loc]; // Swap with next entry
-    queue[id_queue_dst][loc] = queue[id_queue_dst][loc + 1];
-    queue[id_queue_dst][loc + 1] = tmp;    
+  while ( loc < cnt && pw > dst[loc + 1].pw ) {
+    tmp = dst[loc]; // Swap with next entry
+    dst[loc] = dst[loc + 1];
+    dst[loc + 1] = tmp;    
     loc++;
   }
 }
