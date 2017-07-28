@@ -15,6 +15,7 @@
 #define PULSE400_MIN_PULSE 360
 #define PULSE400_PERIOD_WIDTH 2500
 #define PULSE400_END_FLAG 31
+#define PULSE400_START_FLAG 31
 #define PULSE400_UNUSED 31
 
 
@@ -42,10 +43,8 @@
 
 #if defined( __TEENSY_3X__ )
   #define PULSE400_USE_INTERVALTIMER
-  #define DIGITALWRITE( _pin, _value ) digitalWriteFast( _pin, _value ) 
 #else  
   #include <TimerOne.h>
-  #define DIGITALWRITE( _pin, _value ) digitalWrite( _pin, _value ) 
 #endif
 
 
@@ -63,6 +62,10 @@ struct channel_struct_t {
 struct queue_struct_t { 
   volatile uint16_t id : 5; 
   volatile uint16_t pw : 11;
+#ifdef __TEENSY_3X__  
+  volatile uint8_t cnt;
+  volatile uint16_t pins_low_port[4];
+#endif
 };
 
 typedef queue_struct_t queue_t[PULSE400_MAX_CHANNELS + 1];
@@ -142,7 +145,7 @@ class Pulse400 {
   Pulse400& frequency( uint16_t f );
 
   static Pulse400 * instance;  
-  void handleInterruptTimer( void );
+  void handleTimerInterrupt( void );
     
   private:
   int channel_count( void );
@@ -153,7 +156,7 @@ class Pulse400 {
   void init_reg_bitmaps( int8_t id_queue );
   void bubble_sort_on_pulse_width( queue_struct_t list[], uint8_t size );
 #ifdef PULSE400_USE_INTERVALTIMER
-  IntervalTimer esc_timer;
+  IntervalTimer timer;
 #endif  
 
   public: // Temporary! FIXME
@@ -176,7 +179,7 @@ class Pulse400 {
 #endif
 
 #ifdef __TEENSY_3X__
-  volatile uint16_t pins_high_porta, pins_high_portb, pins_high_portc, pins_high_portd;
+  volatile uint16_t pins_high_port[4];
 #endif
 
   volatile int test_flag = 0;
