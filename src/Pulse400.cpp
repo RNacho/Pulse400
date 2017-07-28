@@ -3,41 +3,6 @@
 Pulse400 pulse400; // Global object
 Pulse400 * Pulse400::instance; // Only one instance allowed (singleton)
 
-#if defined( __TEENSY_3X__ )  && defined( PULSE400_OPTIMIZE_TEENSY_3X )
-static struct { uint8_t port; uint8_t bit; } teensy_pins[] = { // A/0, B/1, C/2, D/3 ports: LC port 3 & 4 differ
-  /* 0  */ 1, 16, // Pin 0 & 1 won't work (would require 32 bit masks)
-  /* 1  */ 1, 17,
-  /* 2  */ 3,  0,
-#ifdef __TEENSY_LC__ 
-  /* 3  */ 0,  1, 
-  /* 4  */ 0,  2, 
-#else   
-  /* 3  */ 0, 12, 
-  /* 4  */ 0, 13, 
-#endif  
-  /* 5  */ 3,  7,
-  /* 6  */ 3,  4,
-  /* 7  */ 3,  2,
-  /* 8  */ 3,  3,
-  /* 9  */ 2,  3,
-  /* 10 */ 2,  4,
-  /* 11 */ 2,  6,
-  /* 12 */ 2,  7,
-  /* 13 */ 2,  5,
-  /* 14 */ 3,  1,
-  /* 15 */ 2,  0,
-  /* 16 */ 1,  0,
-  /* 17 */ 1,  1,
-  /* 18 */ 1,  3,
-  /* 19 */ 1,  2,
-  /* 20 */ 3,  5,
-  /* 21 */ 3,  6,
-  /* 22 */ 2,  1,
-  /* 23 */ 2,  2,
-};
-#endif
-
-
 Pulse400::Pulse400( void ) {
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
     channel[ch].pin = PULSE400_UNUSED;
@@ -124,90 +89,28 @@ Pulse400& Pulse400::frequency( uint16_t f ) {
   return *this;
 }
 
-void Pulse400::bubble_sort_on_pulse_width( queue_struct_t list[], uint8_t size ) {
-  queue_struct_t temp;
-  for ( uint8_t i = 0; i < size; i++ ) {
-    for ( uint8_t j = size - 1; j > i; j-- ) {
-      if ( channel[list[j].id].pw < channel[list[ j - 1 ].id].pw ) {
-        temp = list[ j - 1 ];
-        list[ j - 1 ]=list[ j ];
-        list[ j ]=temp;
-      }
-    }
-  }
-}
-
-// Update/refresh the entire queue and set the switch flag 
+// Update/refresh the entire (ALT) queue and set the qctl.change flag 
 
 Pulse400& Pulse400::update() {
   qctl.change = false;
   int queue_cnt = 0;
-  int id_queue = qctl.active ^ 1;
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
     if ( channel[ch].pin != PULSE400_UNUSED ) {
-      queue[id_queue][queue_cnt].id = ch;
-      queue[id_queue][queue_cnt].pw = channel[ch].pw;
+      queue[qctl.active ^ 1][queue_cnt].id = ch;
+      queue[qctl.active ^ 1][queue_cnt].pw = channel[ch].pw;
       queue_cnt++;
     }
   }
-  queue[id_queue][queue_cnt].id = PULSE400_END_FLAG; // Sentinel value
-  bubble_sort_on_pulse_width( queue[id_queue], queue_cnt );
-  init_optimization( id_queue, queue_cnt );
+  queue[qctl.active ^ 1][queue_cnt].id = PULSE400_END_FLAG; // Sentinel value
+  sort_on_pulse_width( queue[qctl.active ^ 1], queue_cnt );
+  init_optimization( queue[qctl.active ^ 1], queue_cnt );
   qctl.change = true;
   return *this;
 }
 
-#if defined( __AVR_ATmega328P__ ) && defined( PULSE400_OPTIMIZE_UNO ) 
+#if defined( PULSE400_OPTIMIZE_STANDARD )
 
-void Pulse400::init_optimization( int8_t id_queue, int8_t queue_cnt ) {
-  pins_high[REG_B] = pins_high[REG_C] = pins_high[REG_D] = 0; 
-  for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
-    if ( channel[ch].pin != PULSE400_UNUSED ) {
-      if ( channel[ch].pin < 8 )
-        pins_high[REG_D] |= 1UL << ( channel[ch].pin );
-      else if ( channel[ch].pin < 14 )      
-        pins_high[REG_B] |= 1UL << ( channel[ch].pin - 8 );
-      else 
-        pins_high[REG_C] |= 1UL << ( channel[ch].pin - 14 );        
-    }
-  }
-}
-
-#elif defined( __TEENSY_3X__ ) && defined( PULSE400_OPTIMIZE_TEENSY_3X )
-
-void Pulse400::init_optimization( int8_t id_queue, int8_t queue_cnt ) {
-  pins_high[3] = pins_high[2] = pins_high[1] = pins_high[0] = 0; 
-  for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
-    if ( channel[ch].pin != PULSE400_UNUSED ) {
-      pins_high[teensy_pins[channel[ch].pin].port] |= 1 << teensy_pins[channel[ch].pin].bit;
-    }
-  }  
-  int16_t cnt = 1;
-  int16_t last_pw = -1;
-  uint16_t bits[4];
-  queue_cnt--; // Skip the sentinel
-  while ( queue_cnt >= 0 ) {
-    if ( queue[id_queue][queue_cnt].pw == last_pw ) {
-      cnt++;
-    } else {
-      bits[REG_A] = bits[REG_B] = bits[REG_C] = bits[REG_D] = 0;
-      cnt = 1;
-    }
-    queue[id_queue][queue_cnt].cnt = cnt;
-    int id = queue[id_queue][queue_cnt].id;
-    bits[teensy_pins[channel[id].pin].port] |= 1 << teensy_pins[channel[id].pin].bit; 
-    queue[id_queue][queue_cnt].pins_low[REG_A] = bits[REG_A];
-    queue[id_queue][queue_cnt].pins_low[REG_B] = bits[REG_B];
-    queue[id_queue][queue_cnt].pins_low[REG_C] = bits[REG_C];
-    queue[id_queue][queue_cnt].pins_low[REG_D] = bits[REG_D];
-    last_pw = queue[id_queue][queue_cnt].pw;
-    queue_cnt--;
-  } 
-}
-
-#else 
-
-void Pulse400::init_optimization( int8_t id_queue, int8_t queue_cnt ) {
+void Pulse400::init_optimization( queue_struct_t queue[], int8_t queue_cnt ) { 
 }
 
 #endif
@@ -239,6 +142,19 @@ void Pulse400::update_queue_entry( int8_t id_queue_src, int8_t id_queue_dst, int
     queue[id_queue_dst][loc] = queue[id_queue_dst][loc + 1];
     queue[id_queue_dst][loc + 1] = tmp;    
     loc++;
+  }
+}
+
+void Pulse400::sort_on_pulse_width( queue_struct_t list[], uint8_t size ) { // Bubble sort ;-) (must benchmark!)
+  queue_struct_t temp;
+  for ( uint8_t i = 0; i < size; i++ ) {
+    for ( uint8_t j = size - 1; j > i; j-- ) {
+      if ( channel[list[j].id].pw < channel[list[ j - 1 ].id].pw ) {
+        temp = list[ j - 1 ];
+        list[ j - 1 ]=list[ j ];
+        list[ j ]=temp;
+      }
+    }
   }
 }
 
@@ -274,113 +190,32 @@ void PULSE400_ISR( void ) {
 #endif
 }
 
+#if !defined( __TEENSY_3X__ )
+
 void Pulse400::timer_start( void ) {
-  qctl.ptr = PULSE400_START_FLAG;
   instance = this;
-#ifdef PULSE400_USE_INTERVALTIMER  
-  timer.begin( PULSE400_ISR, 2 ); // interval 1 doesn't seem to work on Teensy LC
-  timer.priority( 0 ); 
-#else 
+  qctl.ptr = PULSE400_START_FLAG;
   Timer1.initialize( 1 ); 
   Timer1.attachInterrupt( PULSE400_ISR );
-#endif    
 }
 
 void Pulse400::timer_stop( void ) {
-#ifdef PULSE400_USE_INTERVALTIMER  
-  timer.end();
-#else 
   Timer1.detachInterrupt();
-#endif    
 }
 
 Pulse400& Pulse400::sync( void ) {
   cli();
   if ( qctl.ptr == PULSE400_START_FLAG ) { 
-#ifdef PULSE400_USE_INTERVALTIMER    
-    handleTimerInterrupt();
-#else     
     Timer1.restart();
-#endif  
   }
   sei();
   return *this;
 }
 
-#if defined( __AVR_ATmega328P__ ) && defined( PULSE400_OPTIMIZE_UNO )
-
-// ISR optimized for Arduino UNO (ATMega328P)
-// Arduino: ISR 4.63% duty cycle @8ch, set speed: 840 us
-
-void Pulse400::handleTimerInterrupt( void ) {
-  int16_t next_interval = 0;
-  queue_t * q = &queue[qctl.active];
-  if ( qctl.ptr == PULSE400_END_FLAG ) { 
-    if ( qctl.change ) {
-      qctl.change = false;
-      qctl.active = qctl.active ^ 1;
-      q = &queue[qctl.active];
-    }
-    qctl.ptr = 0;
-    PORTB |= pins_high[REG_A]; // Arduino UNO optimization: flip pins per bank
-    PORTC |= pins_high[REG_B];  
-    PORTD |= pins_high[REG_C];
-    next_interval = (*q)[qctl.ptr].pw + PULSE400_MIN_PULSE;
-  } else {    
-    uint16_t previous_pw = (*q)[qctl.ptr].pw;
-    while ( !next_interval ) { // Process equal pulse widths in the same timer interrupt period
-      digitalWrite( channel[(*q)[qctl.ptr].id].pin, LOW );
-      next_interval = (*q)[++qctl.ptr].pw - previous_pw;
-    }
-    if ( (*q)[qctl.ptr].id == PULSE400_END_FLAG ) {
-      next_interval = period_width - previous_pw;
-      qctl.ptr = PULSE400_START_FLAG; 
-    }
-  } 
-  SET_TIMER( next_interval, PULSE400_ISR );
-}
-
-#elif defined( __TEENSY_3X__ ) && defined( PULSE400_OPTIMIZE_TEENSY_3X )
-
-// ISR optimized for Teensy 3.x/LC
-
-// Teensy 3.1: ISR 0.5% duty cycle @8ch, set speed: 44 us
-// Teensy 3.1: ISR 0.42% duty cycle @8ch, set speed: 44 us (FASTRUN/PRIO 0, 0.44% error)
-// Teensy LC : ISR 1% duty cycle @8ch, set speed: 88 us
-
-FASTRUN void Pulse400::handleTimerInterrupt( void ) { 
-  int16_t next_interval = 0;
-  queue_t * q = &queue[qctl.active];
-  if ( qctl.ptr == PULSE400_START_FLAG ) { 
-    if ( qctl.change ) {
-      qctl.change = false;
-      qctl.active = qctl.active ^ 1;
-      q = &queue[qctl.active];
-    }
-    qctl.ptr = 0;
-    GPIOA_PDOR = pins_high[REG_A];  
-    GPIOB_PDOR = pins_high[REG_B];
-    GPIOC_PDOR = pins_high[REG_C];  
-    GPIOD_PDOR = pins_high[REG_D]; 
-    next_interval = (*q)[0].pw + PULSE400_MIN_PULSE;
-  } else {    
-    uint16_t previous_pw = (*q)[qctl.ptr].pw;
-    GPIOA_PCOR = (*q)[qctl.ptr].pins_low[REG_A];  
-    GPIOB_PCOR = (*q)[qctl.ptr].pins_low[REG_B];
-    GPIOC_PCOR = (*q)[qctl.ptr].pins_low[REG_C];  
-    GPIOD_PCOR = (*q)[qctl.ptr].pins_low[REG_D];  
-    qctl.ptr += (*q)[qctl.ptr].cnt;
-    next_interval = (*q)[qctl.ptr].pw - previous_pw;
-    if ( (*q)[qctl.ptr].id == PULSE400_END_FLAG ) { 
-      next_interval = period_width - previous_pw;
-      qctl.ptr = PULSE400_START_FLAG; 
-    }
-  } 
-  SET_TIMER( next_interval, PULSE400_ISR );
-}
-
-#else
+#endif
   
+#if defined( PULSE400_OPTIMIZE_STANDARD )
+
 // Non-optimized ISR
 
 // Teensy 3.1: ISR 0.87% duty cycle @8ch, set speed: 30 us

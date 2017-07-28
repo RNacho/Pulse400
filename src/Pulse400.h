@@ -2,10 +2,14 @@
 
 #include <Arduino.h>
 
+// Configure number of channels here
+
 #define PULSE400_MAX_CHANNELS 8 // Maximum value: 31
 #define MULTI400_NO_OF_CHANNELS 8 // Maximum value: 31
 
-#define PULSE400_OPTIMIZE_UNO
+// Turn options on/off for debugging/testing
+
+#define PULSE400_OPTIMIZE_ARDUINO_UNO
 #define PULSE400_OPTIMIZE_TEENSY_3X
 #define PULSE400_ENABLE_ISR
 
@@ -48,6 +52,12 @@
   #define SET_TIMER( _interval, _func ) Timer1.setPeriod( _interval ) 
 #endif
 
+#undef PULSE400_OPTIMIZE_STANDARD
+#if !defined( __TEENSY_3X__ ) || !defined( PULSE400_OPTIMIZE_TEENSY_3X ) 
+  #if !defined( __AVR_ATmega328P__ ) || !defined( PULSE400_OPTIMIZE_ARDUINO_UNO )
+    #define PULSE400_OPTIMIZE_STANDARD    
+  #endif
+#endif
 
 class Esc400;
 class Servo400;
@@ -55,6 +65,7 @@ class Multi400;
 class Pulse400;
 
 extern Pulse400 pulse400;
+extern void PULSE400_ISR( void );
 
 struct channel_struct_t { 
   volatile uint16_t pin :5; 
@@ -161,8 +172,8 @@ class Pulse400 {
   void timer_start( void );
   void timer_stop( void );
   void update_queue_entry( int8_t id_queue_src, int8_t id_queue_dst, int8_t id_channel, uint16_t pulse_width );
-  void init_optimization( int8_t id_queue, int8_t queue_cnt );
-  void bubble_sort_on_pulse_width( queue_struct_t list[], uint8_t size );
+  void init_optimization( queue_struct_t queue[], int8_t queue_cnt );
+  void sort_on_pulse_width( queue_struct_t list[], uint8_t size );
 #ifdef PULSE400_USE_INTERVALTIMER
   IntervalTimer timer;
 #endif  
@@ -179,7 +190,7 @@ class Pulse400 {
   channel_struct_t channel[PULSE400_MAX_CHANNELS];
   queue_t queue[2] = { { { PULSE400_END_FLAG } }, { { PULSE400_END_FLAG } } };
   
-#if defined( __AVR_ATmega328P__ ) && defined( PULSE400_OPTIMIZE_UNO )
+#if defined( __AVR_ATmega328P__ ) && defined( PULSE400_OPTIMIZE_ARDUINO_UNO )
   enum { REG_B, REG_C, REG_D };
   volatile uint8_t pins_high[3];
 #endif
