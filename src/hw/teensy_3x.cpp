@@ -67,26 +67,6 @@ void Pulse400::init_optimization( queue_struct_t queue[], int8_t queue_cnt ) {
   } 
 }
 
-void Pulse400::timer_start( void ) {
-  qctl.ptr = PULSE400_START_FLAG;
-  instance = this;
-  timer.begin( PULSE400_ISR, 2 ); // interval 1 doesn't seem to work on Teensy LC
-  timer.priority( 0 ); 
-}
-
-void Pulse400::timer_stop( void ) {
-  timer.end();
-}
-
-Pulse400& Pulse400::sync( void ) {
-  cli();
-  if ( qctl.ptr == PULSE400_START_FLAG ) { 
-    handleTimerInterrupt();
-  }
-  sei();
-  return *this;
-}
-
 // ISR optimized for Teensy 3.x/LC
 
 // Teensy 3.1: ISR 0.5% duty cycle @8ch, set speed: 44 us
@@ -103,10 +83,10 @@ FASTRUN void Pulse400::handleTimerInterrupt( void ) {
       q = &queue[qctl.active];
     }
     qctl.ptr = 0;
-    GPIOA_PDOR = pins_high[REG_A];  
-    GPIOB_PDOR = pins_high[REG_B];
-    GPIOC_PDOR = pins_high[REG_C];  
-    GPIOD_PDOR = pins_high[REG_D]; 
+    GPIOA_PSOR = pins_high[REG_A];  
+    GPIOB_PSOR = pins_high[REG_B];
+    GPIOC_PSOR = pins_high[REG_C];  
+    GPIOD_PSOR = pins_high[REG_D]; 
     next_interval = (*q)[0].pw + PULSE400_MIN_PULSE;
   } else {    
     uint16_t previous_pw = (*q)[qctl.ptr].pw;

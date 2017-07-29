@@ -3,6 +3,7 @@
 Pulse400 pulse400; // Global object
 Pulse400 * Pulse400::instance; // Only one instance allowed (singleton)
 
+
 Pulse400::Pulse400( void ) {
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
     channel[ch].pin = PULSE400_UNUSED;
@@ -218,29 +219,39 @@ void PULSE400_ISR( void ) {
 #endif
 }
 
-#if !defined( __TEENSY_3X__ )
-
 void Pulse400::timer_start( void ) {
-  instance = this;
   qctl.ptr = PULSE400_START_FLAG;
+  instance = this;
+#ifdef PULSE400_USE_INTERVALTIMER
+  timer.begin( PULSE400_ISR, 2 ); // interval 1 doesn't seem to work on Teensy LC
+  timer.priority( 0 ); 
+#else 
   Timer1.initialize( 1 ); 
   Timer1.attachInterrupt( PULSE400_ISR );
+#endif  
 }
 
 void Pulse400::timer_stop( void ) {
+#ifdef PULSE400_USE_INTERVALTIMER
+  timer.end();
+#else 
   Timer1.detachInterrupt();
+#endif  
 }
 
 Pulse400& Pulse400::sync( void ) {
   cli();
   if ( qctl.ptr == PULSE400_START_FLAG ) { 
+#ifdef PULSE400_USE_INTERVALTIMER
+    timer.end();
+    handleTimerInterrupt();
+#else 
     Timer1.restart();
+#endif  
   }
   sei();
   return *this;
 }
-
-#endif
   
 #if defined( PULSE400_OPTIMIZE_STANDARD )
 
