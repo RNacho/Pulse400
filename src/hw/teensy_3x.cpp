@@ -94,7 +94,6 @@ void Pulse400::init_optimization( queue_struct_t queue[], int8_t queue_cnt ) {
 
 FASTRUN void Pulse400::handleTimerInterrupt( void ) {
   int16_t next_interval = 0;
-  queue_t * q = &queue[qctl.active];  
   if ( qctl.next == PULSE400_JMP_HIGH ) { // Set all pins HIGH
     GPIOA_PSOR = pins_high.PA;  
     GPIOB_PSOR = pins_high.PB;
@@ -106,11 +105,11 @@ FASTRUN void Pulse400::handleTimerInterrupt( void ) {
     if ( qctl.change ) {
       qctl.change = false;
       qctl.active = qctl.active ^ 1;
-      q = &queue[qctl.active];
     }
     qctl.next = 0;
-    next_interval = ( (*q)[qctl.next].pw + PULSE400_MIN_PULSE ) - period_min;
-  } else { // Pull the pins DOWN, one by one   
+    next_interval = ( queue[qctl.active][qctl.next].pw + PULSE400_MIN_PULSE ) - period_min;
+  } else { // Pull the pins DOWN, a bunch at a time
+    queue_t * q = &queue[qctl.active];  
     uint16_t previous_pw = (*q)[qctl.next].pw;
     GPIOA_PCOR = (*q)[qctl.next].pins_low.PA;  
     GPIOB_PCOR = (*q)[qctl.next].pins_low.PB;

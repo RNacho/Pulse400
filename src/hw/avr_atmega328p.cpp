@@ -20,7 +20,6 @@ void Pulse400::init_optimization( queue_struct_t queue[], int8_t queue_cnt ) {
 // Arduino: ISR 4.63% duty cycle @8ch, set speed: 840 us
 
 void Pulse400::handleTimerInterrupt( void ) {
-  int16_t next_interval = 0;
   queue_t * q = &queue[qctl.active];
   if ( qctl.next == PULSE400_JMP_HIGH ) { // Set all pins HIGH
     PORTB |= pins_high.PB; // Arduino UNO optimization: flip pins per bank
@@ -32,11 +31,11 @@ void Pulse400::handleTimerInterrupt( void ) {
     if ( qctl.change ) {
       qctl.change = false;
       qctl.active = qctl.active ^ 1;
-      q = &queue[qctl.active];
     }
     qctl.next = 0;
-    next_interval = ( (*q)[qctl.next].pw + PULSE400_MIN_PULSE ) - period_min;
+    next_interval = ( queue[qctl.active][qctl.next].pw + PULSE400_MIN_PULSE ) - period_min;
   } else {    
+    int16_t next_interval = 0;
     uint16_t previous_pw = (*q)[qctl.next].pw;
     while ( !next_interval ) { // Process equal pulse widths in the same timer interrupt period
       digitalWrite( channel[(*q)[qctl.next].id].pin, LOW );
