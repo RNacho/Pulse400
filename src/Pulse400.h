@@ -209,7 +209,7 @@ class Pulse400 {
 
   public: // Temporary! FIXME
   struct {
-    volatile uint8_t ptr : 6;
+    volatile uint8_t next : 6;
     volatile uint8_t active : 1;
     volatile uint8_t change : 1;
   } qctl;

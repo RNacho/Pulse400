@@ -95,32 +95,32 @@ void Pulse400::init_optimization( queue_struct_t queue[], int8_t queue_cnt ) {
 FASTRUN void Pulse400::handleTimerInterrupt( void ) {
   int16_t next_interval = 0;
   queue_t * q = &queue[qctl.active];  
-  if ( qctl.ptr == PULSE400_JMP_HIGH ) { // Set all pins HIGH
+  if ( qctl.next == PULSE400_JMP_HIGH ) { // Set all pins HIGH
     GPIOA_PSOR = pins_high.PA;  
     GPIOB_PSOR = pins_high.PB;
     GPIOC_PSOR = pins_high.PC;  
     GPIOD_PSOR = pins_high.PD;   
-    qctl.ptr = PULSE400_JMP_PONR;
+    qctl.next = PULSE400_JMP_PONR;
     next_interval = period_min;
-  } else if ( qctl.ptr == PULSE400_JMP_PONR ) { // Point of no return
+  } else if ( qctl.next == PULSE400_JMP_PONR ) { // Point of no return
     if ( qctl.change ) {
       qctl.change = false;
       qctl.active = qctl.active ^ 1;
       q = &queue[qctl.active];
     }
-    qctl.ptr = 0;
-    next_interval = ( (*q)[qctl.ptr].pw + PULSE400_MIN_PULSE ) - period_min;
+    qctl.next = 0;
+    next_interval = ( (*q)[qctl.next].pw + PULSE400_MIN_PULSE ) - period_min;
   } else { // Pull the pins DOWN, one by one   
-    uint16_t previous_pw = (*q)[qctl.ptr].pw;
-    GPIOA_PCOR = (*q)[qctl.ptr].pins_low.PA;  
-    GPIOB_PCOR = (*q)[qctl.ptr].pins_low.PB;
-    GPIOC_PCOR = (*q)[qctl.ptr].pins_low.PC;  
-    GPIOD_PCOR = (*q)[qctl.ptr].pins_low.PD;  
-    qctl.ptr += (*q)[qctl.ptr].cnt;
-    next_interval = (*q)[qctl.ptr].pw - previous_pw;
-    if ( (*q)[qctl.ptr].id == PULSE400_END_FLAG ) { 
+    uint16_t previous_pw = (*q)[qctl.next].pw;
+    GPIOA_PCOR = (*q)[qctl.next].pins_low.PA;  
+    GPIOB_PCOR = (*q)[qctl.next].pins_low.PB;
+    GPIOC_PCOR = (*q)[qctl.next].pins_low.PC;  
+    GPIOD_PCOR = (*q)[qctl.next].pins_low.PD;  
+    qctl.next += (*q)[qctl.next].cnt;
+    next_interval = (*q)[qctl.next].pw - previous_pw;
+    if ( (*q)[qctl.next].id == PULSE400_END_FLAG ) { 
       next_interval = period_max - previous_pw;
-      qctl.ptr = PULSE400_JMP_HIGH; 
+      qctl.next = PULSE400_JMP_HIGH; 
     }
   } 
   SET_TIMER( next_interval, PULSE400_ISR );
