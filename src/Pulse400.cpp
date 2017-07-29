@@ -226,7 +226,7 @@ void PULSE400_ISR( void ) {
 }
 
 void Pulse400::timer_start( void ) {
-  qctl.ptr = PULSE400_START_FLAG;
+  qctl.ptr = PULSE400_JMP_HIGH;
   instance = this;
 #ifdef PULSE400_USE_INTERVALTIMER
   timer.begin( PULSE400_ISR, 2 ); // interval 1 doesn't seem to work on Teensy LC
@@ -247,7 +247,7 @@ void Pulse400::timer_stop( void ) {
 
 Pulse400& Pulse400::sync( void ) {
   cli();
-  if ( qctl.ptr == PULSE400_START_FLAG ) { 
+  if ( qctl.ptr == PULSE400_JMP_HIGH ) { 
 #ifdef PULSE400_USE_INTERVALTIMER
     timer.end();
     handleTimerInterrupt();
@@ -269,19 +269,22 @@ Pulse400& Pulse400::sync( void ) {
 void Pulse400::handleTimerInterrupt( void ) {
   int16_t next_interval = 0;
   queue_t * q = &queue[qctl.active];
-  if ( qctl.ptr == PULSE400_START_FLAG ) { 
-    if ( qctl.change ) {
-      qctl.change = false;
-      qctl.active = qctl.active ^ 1;
-      q = &queue[qctl.active];
-    }
+  if ( qctl.ptr == PULSE400_JMP_HIGH ) { // Set all pins HIGH
     qctl.ptr = 0; // Point the queue pointer at the start of the queue
     while( (*q)[qctl.ptr].id != PULSE400_END_FLAG ) {
       digitalWrite( channel[(*q)[qctl.ptr].id].pin, HIGH );
       qctl.ptr++;
     }
+    qctl.ptr = PULSE400_JMP_PONR;
+    next_interval = period_min;    
+  } else if ( qctl.ptr == PULSE400_JMP_PONR ) { // Point of no return 
+    if ( qctl.change ) {
+      qctl.change = false;
+      qctl.active = qctl.active ^ 1;
+      q = &queue[qctl.active];
+    }
     qctl.ptr = 0;
-    next_interval = (*q)[qctl.ptr].pw + PULSE400_MIN_PULSE;
+    next_interval = ( (*q)[qctl.ptr].pw + PULSE400_MIN_PULSE ) - period_min;
   } else {    
     uint16_t previous_pw = (*q)[qctl.ptr].pw;
     while ( !next_interval ) { // Process equal pulse widths in the same timer interrupt period
@@ -290,7 +293,7 @@ void Pulse400::handleTimerInterrupt( void ) {
     }
     if ( (*q)[qctl.ptr].id == PULSE400_END_FLAG ) { 
       next_interval = period_max - previous_pw;
-      qctl.ptr = PULSE400_START_FLAG; 
+      qctl.ptr = PULSE400_JMP_HIGH; 
     }
   } 
   SET_TIMER( next_interval, PULSE400_ISR );

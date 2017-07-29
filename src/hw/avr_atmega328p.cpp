@@ -22,17 +22,20 @@ void Pulse400::init_optimization( queue_struct_t queue[], int8_t queue_cnt ) {
 void Pulse400::handleTimerInterrupt( void ) {
   int16_t next_interval = 0;
   queue_t * q = &queue[qctl.active];
-  if ( qctl.ptr == PULSE400_END_FLAG ) { 
+  if ( qctl.ptr == PULSE400_JMP_HIGH ) { // Set all pins HIGH
+    PORTB |= pins_high.PB; // Arduino UNO optimization: flip pins per bank
+    PORTC |= pins_high.PC;  
+    PORTD |= pins_high.PD;
+    qctl.ptr = PULSE400_JMP_PONR;
+    next_interval = period_min;
+  } else if ( qctl.ptr == PULSE400_JMP_HIGH ) { 
     if ( qctl.change ) {
       qctl.change = false;
       qctl.active = qctl.active ^ 1;
       q = &queue[qctl.active];
     }
     qctl.ptr = 0;
-    PORTB |= pins_high.PB; // Arduino UNO optimization: flip pins per bank
-    PORTC |= pins_high.PC;  
-    PORTD |= pins_high.PD;
-    next_interval = (*q)[qctl.ptr].pw + PULSE400_MIN_PULSE;
+    next_interval = ( (*q)[qctl.ptr].pw + PULSE400_MIN_PULSE ) - period_min;
   } else {    
     uint16_t previous_pw = (*q)[qctl.ptr].pw;
     while ( !next_interval ) { // Process equal pulse widths in the same timer interrupt period
@@ -41,7 +44,7 @@ void Pulse400::handleTimerInterrupt( void ) {
     }
     if ( (*q)[qctl.ptr].id == PULSE400_END_FLAG ) {
       next_interval = period_max - previous_pw;
-      qctl.ptr = PULSE400_START_FLAG; 
+      qctl.ptr = PULSE400_JMP_HIGH; 
     }
   } 
   SET_TIMER( next_interval, PULSE400_ISR );

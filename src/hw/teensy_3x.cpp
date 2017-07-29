@@ -92,22 +92,25 @@ void Pulse400::init_optimization( queue_struct_t queue[], int8_t queue_cnt ) {
 // Teensy 3.1: ISR 0.42% duty cycle @8ch, set speed: 44 us (FASTRUN/PRIO 0, 0.44% error)
 // Teensy LC : ISR 1% duty cycle @8ch, set speed: 88 us
 
-FASTRUN void Pulse400::handleTimerInterrupt( void ) { 
+FASTRUN void Pulse400::handleTimerInterrupt( void ) {
   int16_t next_interval = 0;
-  queue_t * q = &queue[qctl.active];
-  if ( qctl.ptr == PULSE400_START_FLAG ) { 
+  queue_t * q = &queue[qctl.active];  
+  if ( qctl.ptr == PULSE400_JMP_HIGH ) { // Set all pins HIGH
+    GPIOA_PSOR = pins_high.PA;  
+    GPIOB_PSOR = pins_high.PB;
+    GPIOC_PSOR = pins_high.PC;  
+    GPIOD_PSOR = pins_high.PD;   
+    qctl.ptr = PULSE400_JMP_PONR;
+    next_interval = period_min;
+  } else if ( qctl.ptr == PULSE400_JMP_PONR ) { // Point of no return
     if ( qctl.change ) {
       qctl.change = false;
       qctl.active = qctl.active ^ 1;
       q = &queue[qctl.active];
     }
     qctl.ptr = 0;
-    GPIOA_PSOR = pins_high.PA;  
-    GPIOB_PSOR = pins_high.PB;
-    GPIOC_PSOR = pins_high.PC;  
-    GPIOD_PSOR = pins_high.PD; 
-    next_interval = (*q)[0].pw + PULSE400_MIN_PULSE;
-  } else {    
+    next_interval = ( (*q)[qctl.ptr].pw + PULSE400_MIN_PULSE ) - period_min;
+  } else { // Pull the pins DOWN, one by one   
     uint16_t previous_pw = (*q)[qctl.ptr].pw;
     GPIOA_PCOR = (*q)[qctl.ptr].pins_low.PA;  
     GPIOB_PCOR = (*q)[qctl.ptr].pins_low.PB;
@@ -117,7 +120,7 @@ FASTRUN void Pulse400::handleTimerInterrupt( void ) {
     next_interval = (*q)[qctl.ptr].pw - previous_pw;
     if ( (*q)[qctl.ptr].id == PULSE400_END_FLAG ) { 
       next_interval = period_max - previous_pw;
-      qctl.ptr = PULSE400_START_FLAG; 
+      qctl.ptr = PULSE400_JMP_HIGH; 
     }
   } 
   SET_TIMER( next_interval, PULSE400_ISR );
