@@ -1,5 +1,6 @@
 #include <Pulse400.h>
 
+
 Pulse400 pulse400; // Global object
 Pulse400 * Pulse400::instance; // Only one instance allowed (singleton)
 

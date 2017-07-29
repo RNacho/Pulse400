@@ -1,48 +1,64 @@
 #include <Pulse400.h>
 
 #if defined( __TEENSY_3X__ )  && defined( PULSE400_OPTIMIZE_TEENSY_3X )
-static struct { uint8_t port; uint8_t bit; } teensy_pins[] = { // A/0, B/1, C/2, D/3 ports: LC port 3 & 4 differ
-  /* 0  */ 1, 16, // Pin 0 & 1 won't work (would require 32 bit masks)
-  /* 1  */ 1, 17,
-  /* 2  */ 3,  0,
+static struct { uint8_t port; uint8_t bit; } teensy_pins[] = { 
+// A=0, B=1, C=2, D=3, E=4 ports: LC port 3 & 4 differ
+  1, 16, // pin 0
+  1, 17, // pin 1
+  3,  0, // pin 2
 #ifdef __TEENSY_LC__ 
-  /* 3  */ 0,  1, 
-  /* 4  */ 0,  2, 
+  0,  1, // pin 3
+  0,  2, // pin 4
 #else   
-  /* 3  */ 0, 12, 
-  /* 4  */ 0, 13, 
+  0, 12, // pin 3
+  0, 13, // pin 4
 #endif  
-  /* 5  */ 3,  7,
-  /* 6  */ 3,  4,
-  /* 7  */ 3,  2,
-  /* 8  */ 3,  3,
-  /* 9  */ 2,  3,
-  /* 10 */ 2,  4,
-  /* 11 */ 2,  6,
-  /* 12 */ 2,  7,
-  /* 13 */ 2,  5,
-  /* 14 */ 3,  1,
-  /* 15 */ 2,  0,
-  /* 16 */ 1,  0,
-  /* 17 */ 1,  1,
-  /* 18 */ 1,  3,
-  /* 19 */ 1,  2,
-  /* 20 */ 3,  5,
-  /* 21 */ 3,  6,
-  /* 22 */ 2,  1,
-  /* 23 */ 2,  2,
+  3,  7, // pin 5
+  3,  4, // pin 6
+  3,  2, // pin 7
+  3,  3, // pin 8
+  2,  3, // pin 9
+  2,  4, // pin 10
+  2,  6, // pin 11
+  2,  7, // pin 12
+  2,  5, // pin 13
+  3,  1, // pin 14
+  2,  0, // pin 15
+  1,  0, // pin 16
+  1,  1, // pin 17
+  1,  3, // pin 18
+  1,  2, // pin 19
+  3,  5, // pin 20
+  3,  6, // pin 21
+  2,  1, // pin 22
+  2,  2, // pin 23
+  0,  5, // pin 24
+  1, 19, // pin 25 (Reg B is 8 bits on LC: not supported on Teensy LC)
+  4,  1, // pin 26 (Reg E is not supported)
+  2,  9, // pin 27 (REG C is 8 bits: not supported)
+  2,  8, // pin 28 (REG C is 8 bits: not supported)
+  2, 10, // pin 29 (REG C is 8 bits: not supported)
+  2, 11, // pin 30 (REG C is 8 bits: not supported)
+  4,  0, // pin 31 (Reg E: not supported)
+  1, 18, // pin 32 
+  0,  4, // pin 33
 };
 
 
 void Pulse400::init_optimization( queue_struct_t queue[], int8_t queue_cnt ) {
   // Create a single set of bitmaps for turning pins on
-  pins_high[3] = pins_high[2] = pins_high[1] = pins_high[0] = 0; 
+  pins_high.PA = pins_high.PB = pins_high.PC = pins_high.PD = 0;
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
     if ( channel[ch].pin != PULSE400_UNUSED ) {
-      pins_high[teensy_pins[channel[ch].pin].port] |= 1 << teensy_pins[channel[ch].pin].bit;
+      switch ( teensy_pins[channel[ch].pin].port ) {
+        case 0: pins_high.PA |= 1UL << teensy_pins[channel[ch].pin].bit; break;
+        case 1: pins_high.PB |= 1UL << teensy_pins[channel[ch].pin].bit; break;
+        case 2: pins_high.PC |= 1UL << teensy_pins[channel[ch].pin].bit; break;
+        case 3: pins_high.PD |= 1UL << teensy_pins[channel[ch].pin].bit; break;
+      }
     }
   }  
-  uint16_t bits[4];
+  reg_struct_t bits;
   int16_t skip_cnt = 1;
   int16_t last_pw = -1;
   queue_cnt--; // Counter points to PULSE400_END_FLAG entry, decrement for the first entry
@@ -52,16 +68,17 @@ void Pulse400::init_optimization( queue_struct_t queue[], int8_t queue_cnt ) {
     if ( queue[queue_cnt].pw == last_pw ) {
       skip_cnt++;
     } else {
-      bits[REG_A] = bits[REG_B] = bits[REG_C] = bits[REG_D] = 0;
+      bits.PA = bits.PB = bits.PC = bits.PD = 0;
       skip_cnt = 1;
     }
     queue[queue_cnt].cnt = skip_cnt;
-    bits[teensy_pins[channel[queue[queue_cnt].id].pin].port] |= 
-        1 << teensy_pins[channel[queue[queue_cnt].id].pin].bit; 
-    queue[queue_cnt].pins_low[REG_A] = bits[REG_A];
-    queue[queue_cnt].pins_low[REG_B] = bits[REG_B];
-    queue[queue_cnt].pins_low[REG_C] = bits[REG_C];
-    queue[queue_cnt].pins_low[REG_D] = bits[REG_D];
+    switch ( teensy_pins[channel[queue[queue_cnt].id].pin].port ) {
+      case 0: bits.PA |= 1UL << teensy_pins[channel[queue[queue_cnt].id].pin].bit; break;
+      case 1: bits.PB |= 1UL << teensy_pins[channel[queue[queue_cnt].id].pin].bit; break;
+      case 2: bits.PC |= 1UL << teensy_pins[channel[queue[queue_cnt].id].pin].bit; break;
+      case 3: bits.PD |= 1UL << teensy_pins[channel[queue[queue_cnt].id].pin].bit; break;
+    }
+    queue[queue_cnt].pins_low = bits;
     last_pw = queue[queue_cnt].pw;
     queue_cnt--;
   } 
@@ -83,17 +100,17 @@ FASTRUN void Pulse400::handleTimerInterrupt( void ) {
       q = &queue[qctl.active];
     }
     qctl.ptr = 0;
-    GPIOA_PSOR = pins_high[REG_A];  
-    GPIOB_PSOR = pins_high[REG_B];
-    GPIOC_PSOR = pins_high[REG_C];  
-    GPIOD_PSOR = pins_high[REG_D]; 
+    GPIOA_PSOR = pins_high.PA;  
+    GPIOB_PSOR = pins_high.PB;
+    GPIOC_PSOR = pins_high.PC;  
+    GPIOD_PSOR = pins_high.PD; 
     next_interval = (*q)[0].pw + PULSE400_MIN_PULSE;
   } else {    
     uint16_t previous_pw = (*q)[qctl.ptr].pw;
-    GPIOA_PCOR = (*q)[qctl.ptr].pins_low[REG_A];  
-    GPIOB_PCOR = (*q)[qctl.ptr].pins_low[REG_B];
-    GPIOC_PCOR = (*q)[qctl.ptr].pins_low[REG_C];  
-    GPIOD_PCOR = (*q)[qctl.ptr].pins_low[REG_D];  
+    GPIOA_PCOR = (*q)[qctl.ptr].pins_low.PA;  
+    GPIOB_PCOR = (*q)[qctl.ptr].pins_low.PB;
+    GPIOC_PCOR = (*q)[qctl.ptr].pins_low.PC;  
+    GPIOD_PCOR = (*q)[qctl.ptr].pins_low.PD;  
     qctl.ptr += (*q)[qctl.ptr].cnt;
     next_interval = (*q)[qctl.ptr].pw - previous_pw;
     if ( (*q)[qctl.ptr].id == PULSE400_END_FLAG ) { 

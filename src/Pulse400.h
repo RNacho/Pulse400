@@ -68,16 +68,34 @@ extern Pulse400 pulse400;
 extern void PULSE400_ISR( void );
 
 struct channel_struct_t { 
-  volatile uint16_t pin :5; 
-  volatile uint16_t pw : 11;
+  uint16_t pin :5; 
+  uint16_t pw : 11;
 };
+
+#if defined( __TEENSY_3X__ ) && defined( PULSE400_OPTIMIZE_TEENSY_3X )    
+
+struct reg_struct_t {
+#ifdef __TEENSY_LC__ 
+  volatile uint16_t PA;
+  volatile uint8_t PB;
+  volatile uint8_t PC;
+  volatile uint8_t PD;
+#else  
+  volatile uint16_t PA;
+  volatile uint32_t PB;
+  volatile uint8_t PC;
+  volatile uint8_t PD;
+#endif  
+};
+
+#endif
 
 struct queue_struct_t { 
   volatile uint16_t id : 5; 
   volatile uint16_t pw : 11;
 #if defined( __TEENSY_3X__ ) && defined( PULSE400_OPTIMIZE_TEENSY_3X )    
   volatile uint8_t cnt;
-  volatile uint16_t pins_low[4];
+  reg_struct_t pins_low;
 #endif
 };
 
@@ -197,12 +215,8 @@ class Pulse400 {
 #endif
 
 #if defined( __TEENSY_3X__ ) && defined( PULSE400_OPTIMIZE_TEENSY_3X )
-    enum { REG_A, REG_B, REG_C, REG_D };
-  #ifdef __TEENSY_LC__OFF
-    volatile uint8_t pins_high[4];
-  #else 
-    volatile uint16_t pins_high[4];
-  #endif 
+  volatile reg_struct_t pins_high;
+
 #endif
 
 };
