@@ -40,7 +40,7 @@ void Pulse400::handleTimerInterrupt( void ) {
       next_interval = (*q)[++qctl.ptr].pw - previous_pw;
     }
     if ( (*q)[qctl.ptr].id == PULSE400_END_FLAG ) {
-      next_interval = period_width - previous_pw;
+      next_interval = period_max - previous_pw;
       qctl.ptr = PULSE400_START_FLAG; 
     }
   } 

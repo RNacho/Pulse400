@@ -7,7 +7,7 @@
 #define PULSE400_MAX_CHANNELS 8 // Maximum value: 31
 #define MULTI400_NO_OF_CHANNELS 8 // Maximum value: 31
 
-// Turn options on/off for debugging/testing
+// Turn options on/off for debugging/testing/development
 
 #define PULSE400_OPTIMIZE_ARDUINO_UNO
 #define PULSE400_OPTIMIZE_TEENSY_3X
@@ -15,9 +15,9 @@
 
 #define PULSE400_DEFAULT_PULSE 1000
 #define PULSE400_MIN_PULSE 360
-#define PULSE400_PERIOD_WIDTH 2500
-#define PULSE400_END_FLAG 31
+#define PULSE400_PERIOD_MAX 2500
 #define PULSE400_START_FLAG 31
+#define PULSE400_END_FLAG 31
 #define PULSE400_UNUSED 31
 
 #define PINHIGHD( _pin ) PORTD |= ( 1 << _pin );
@@ -187,6 +187,7 @@ class Pulse400 {
   int16_t get_pulse( int8_t id_channel );
   Pulse400& update( void );
   Pulse400& frequency( uint16_t f );
+  Pulse400& minimum( uint16_t f = 360 );
   Pulse400& sync( void );
 
   static Pulse400 * instance;  
@@ -212,7 +213,8 @@ class Pulse400 {
     volatile uint8_t change : 1;
   } qctl;
   volatile uint8_t update_cnt = 0;
-  volatile uint16_t period_width = PULSE400_PERIOD_WIDTH;
+  volatile uint16_t period_min = PULSE400_MIN_PULSE;
+  volatile uint16_t period_max = PULSE400_PERIOD_MAX;
 
   channel_struct_t channel[PULSE400_MAX_CHANNELS];
   queue_t queue[2] = { { { PULSE400_END_FLAG } }, { { PULSE400_END_FLAG } } };

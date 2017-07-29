@@ -47,7 +47,7 @@ Pulse400& Pulse400::detach( int8_t id_channel ) {
 
 Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pw, bool no_update ) {
   if ( id_channel != PULSE400_UNUSED && channel[id_channel].pin != PULSE400_UNUSED ) {
-    pw = constrain( pw, 1, period_width + PULSE400_MIN_PULSE - 1 ) - PULSE400_MIN_PULSE;
+    pw = constrain( pw, 1, period_max + PULSE400_MIN_PULSE - 1 ) - PULSE400_MIN_PULSE;
     if ( channel[id_channel].pw != pw ) {
       channel[id_channel].pw = pw;
       if ( no_update ) {
@@ -87,7 +87,12 @@ int16_t Pulse400::get_pulse( int8_t id_channel ) {
 }
 
 Pulse400& Pulse400::frequency( uint16_t f ) {
-  period_width = ( 1000000 / f ) - PULSE400_MIN_PULSE;
+  period_max = ( 1000000 / f ) - PULSE400_MIN_PULSE;
+  return *this;
+}
+
+Pulse400& Pulse400::minimum( uint16_t f ) {
+  period_min = f;
   return *this;
 }
 
@@ -284,7 +289,7 @@ void Pulse400::handleTimerInterrupt( void ) {
       next_interval = (*q)[++qctl.ptr].pw - previous_pw;
     }
     if ( (*q)[qctl.ptr].id == PULSE400_END_FLAG ) { 
-      next_interval = period_width - previous_pw;
+      next_interval = period_max - previous_pw;
       qctl.ptr = PULSE400_START_FLAG; 
     }
   } 

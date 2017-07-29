@@ -44,6 +44,8 @@ static struct { uint8_t port; uint8_t bit; } teensy_pins[] = {
   0,  4, // pin 33
 };
 
+// Expand? Reg C 8 -> 16 bits, Reg B 8 -> 32 bits (LC), Reg E 8 bits: 5 bytes * (channels + 1)
+
 
 void Pulse400::init_optimization( queue_struct_t queue[], int8_t queue_cnt ) {
   // Create a single set of bitmaps for turning pins on
@@ -114,7 +116,7 @@ FASTRUN void Pulse400::handleTimerInterrupt( void ) {
     qctl.ptr += (*q)[qctl.ptr].cnt;
     next_interval = (*q)[qctl.ptr].pw - previous_pw;
     if ( (*q)[qctl.ptr].id == PULSE400_END_FLAG ) { 
-      next_interval = period_width - previous_pw;
+      next_interval = period_max - previous_pw;
       qctl.ptr = PULSE400_START_FLAG; 
     }
   } 
