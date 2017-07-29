@@ -88,6 +88,14 @@ struct reg_struct_t {
 #endif  
 };
 
+#elif defined( __AVR_ATmega328P__ )
+
+struct reg_struct_t {
+  volatile uint8_t PB;
+  volatile uint8_t PC;
+  volatile uint8_t PD;
+};
+
 #endif
 
 struct queue_struct_t { 
@@ -210,13 +218,9 @@ class Pulse400 {
   queue_t queue[2] = { { { PULSE400_END_FLAG } }, { { PULSE400_END_FLAG } } };
   
 #if defined( __AVR_ATmega328P__ ) && defined( PULSE400_OPTIMIZE_ARDUINO_UNO )
-  enum { REG_B, REG_C, REG_D };
-  volatile uint8_t pins_high[3];
-#endif
-
-#if defined( __TEENSY_3X__ ) && defined( PULSE400_OPTIMIZE_TEENSY_3X )
   volatile reg_struct_t pins_high;
-
+#elif defined( __TEENSY_3X__ ) && defined( PULSE400_OPTIMIZE_TEENSY_3X )
+  volatile reg_struct_t pins_high;
 #endif
 
 };

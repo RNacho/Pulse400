@@ -3,15 +3,15 @@
 #if defined( __AVR_ATmega328P__ ) && defined( PULSE400_OPTIMIZE_ARDUINO_UNO ) 
 
 void Pulse400::init_optimization( queue_struct_t queue[], int8_t queue_cnt ) {
-  pins_high[REG_B] = pins_high[REG_C] = pins_high[REG_D] = 0; 
+  pins_high.PB = pins_high.PC = pins_high.PD = 0; 
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
     if ( channel[ch].pin != PULSE400_UNUSED ) {
       if ( channel[ch].pin < 8 )
-        pins_high[REG_D] |= 1UL << ( channel[ch].pin );
+        pins_high.PD |= 1UL << ( channel[ch].pin );
       else if ( channel[ch].pin < 14 )      
-        pins_high[REG_B] |= 1UL << ( channel[ch].pin - 8 );
+        pins_high.PB |= 1UL << ( channel[ch].pin - 8 );
       else 
-        pins_high[REG_C] |= 1UL << ( channel[ch].pin - 14 );        
+        pins_high.PC |= 1UL << ( channel[ch].pin - 14 );        
     }
   }
 }
@@ -29,9 +29,9 @@ void Pulse400::handleTimerInterrupt( void ) {
       q = &queue[qctl.active];
     }
     qctl.ptr = 0;
-    PORTB |= pins_high[REG_B]; // Arduino UNO optimization: flip pins per bank
-    PORTC |= pins_high[REG_C];  
-    PORTD |= pins_high[REG_D];
+    PORTB |= pins_high.PB; // Arduino UNO optimization: flip pins per bank
+    PORTC |= pins_high.PC;  
+    PORTD |= pins_high.PD;
     next_interval = (*q)[qctl.ptr].pw + PULSE400_MIN_PULSE;
   } else {    
     uint16_t previous_pw = (*q)[qctl.ptr].pw;
