@@ -91,7 +91,7 @@ Pulse400& Pulse400::frequency( uint16_t f ) {
   return *this;
 }
 
-Pulse400& Pulse400::minimum( uint16_t f ) {
+Pulse400& Pulse400::deadline( uint16_t f ) {
   period_min = f;
   return *this;
 }
@@ -276,16 +276,20 @@ void Pulse400::handleTimerInterrupt( void ) {
       qctl.next++;
     }
     qctl.next = PULSE400_JMP_PONR;
-    next_interval = period_min;    
-  } else if ( qctl.next == PULSE400_JMP_PONR ) { // Point of no return 
-    if ( qctl.change ) {
+    SET_TIMER( period_min, PULSE400_ISR );
+    PINLOWD( 7 );
+    return;
+  } 
+  if ( qctl.next == PULSE400_JMP_PONR ) { // Point of no return 
+    if ( qctl.change ) { // TODO: shortcut if PONR == next LOW
       qctl.change = false;
       qctl.active = qctl.active ^ 1;
       q = &queue[qctl.active];
     }
     qctl.next = 0;
     next_interval = ( (*q)[qctl.next].pw + PULSE400_MIN_PULSE ) - period_min;
-  } else {    
+  } 
+  if ( next_interval == 0 ) {    
     uint16_t previous_pw = (*q)[qctl.next].pw;
     while ( !next_interval ) { // Process equal pulse widths in the same timer interrupt period
       digitalWrite( channel[(*q)[qctl.next].id].pin, LOW );

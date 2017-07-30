@@ -35,10 +35,10 @@ static struct { uint8_t port; uint8_t bit; } teensy_pins[] = {
   0,  5, // pin 24
   1, 19, // pin 25 (Reg B is 8 bits on LC: not supported on Teensy LC)
   4,  1, // pin 26 (Reg E is not supported)
-  2,  9, // pin 27 (REG C is 8 bits: not supported)
-  2,  8, // pin 28 (REG C is 8 bits: not supported)
-  2, 10, // pin 29 (REG C is 8 bits: not supported)
-  2, 11, // pin 30 (REG C is 8 bits: not supported)
+  2,  9, // pin 27 (Reg C is 8 bits: not supported)
+  2,  8, // pin 28 (Reg C is 8 bits: not supported)
+  2, 10, // pin 29 (Reg C is 8 bits: not supported)
+  2, 11, // pin 30 (Reg C is 8 bits: not supported)
   4,  0, // pin 31 (Reg E: not supported)
   1, 18, // pin 32 
   0,  4, // pin 33
@@ -100,15 +100,18 @@ FASTRUN void Pulse400::handleTimerInterrupt( void ) {
     GPIOC_PSOR = pins_high.PC;  
     GPIOD_PSOR = pins_high.PD;   
     qctl.next = PULSE400_JMP_PONR;
-    next_interval = period_min;
-  } else if ( qctl.next == PULSE400_JMP_PONR ) { // Point of no return
+    SET_TIMER( period_min, PULSE400_ISR );
+    return;
+  }  
+  if ( qctl.next == PULSE400_JMP_PONR ) { // Point of no return
     if ( qctl.change ) {
       qctl.change = false;
       qctl.active = qctl.active ^ 1;
     }
     qctl.next = 0;
     next_interval = ( queue[qctl.active][qctl.next].pw + PULSE400_MIN_PULSE ) - period_min;
-  } else { // Pull the pins DOWN, a bunch at a time
+  }
+  if ( next_interval == 0 ) { // Pull the pins DOWN, a bunch at a time if needed
     queue_t * q = &queue[qctl.active];  
     uint16_t previous_pw = (*q)[qctl.next].pw;
     GPIOA_PCOR = (*q)[qctl.next].pins_low.PA;  

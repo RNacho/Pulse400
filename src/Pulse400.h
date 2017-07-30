@@ -9,7 +9,7 @@
 
 // Turn options on/off for debugging/testing/development
 
-#define PULSE400_OPTIMIZE_ARDUINO_UNO
+#undef PULSE400_OPTIMIZE_ARDUINO_UNO
 #define PULSE400_OPTIMIZE_TEENSY_3X
 #define PULSE400_ENABLE_ISR
 
@@ -17,7 +17,7 @@
 #define PULSE400_MIN_PULSE 360
 #define PULSE400_PERIOD_MAX 2500
 #define PULSE400_END_FLAG 31
-#define PULSE400_JMP_HIGH 32 
+#define PULSE400_JMP_HIGH 32 // fits in qctl.next (6 bit = 0..63)
 #define PULSE400_JMP_PONR 33
 #define PULSE400_UNUSED 31
 
@@ -188,7 +188,7 @@ class Pulse400 {
   int16_t get_pulse( int8_t id_channel );
   Pulse400& update( void );
   Pulse400& frequency( uint16_t f );
-  Pulse400& minimum( uint16_t f = 360 );
+  Pulse400& deadline( uint16_t f = 360 );
   Pulse400& sync( void );
 
   static Pulse400 * instance;  
@@ -209,7 +209,7 @@ class Pulse400 {
 
   public: // Temporary! FIXME
   struct {
-    volatile uint8_t next : 6;
+    volatile uint8_t next : 6; // max 64!
     volatile uint8_t active : 1;
     volatile uint8_t change : 1;
   } qctl;
