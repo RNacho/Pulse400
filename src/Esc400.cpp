@@ -6,12 +6,12 @@ Esc400& Esc400::begin( int8_t pin ) {
 }
 
 Esc400& Esc400::speed( uint16_t v ) {
-  pulse400.set_pulse( id_channel, map( constrain( v, 0, 1000 ), 0, 1000, min, max ) );
+  pulse400.pulse( id_channel, map( constrain( v, 0, 1000 ), 0, 1000, min, max ) );
   return *this;
 }
 
 int16_t Esc400::speed() {
-  return id_channel == -1 ? -1 : map( pulse400.get_pulse( id_channel ), min, max, 1, 1000 );
+  return id_channel == -1 ? -1 : map( pulse400.pulse( id_channel ), min, max, 1, 1000 );
 }
 
 Esc400& Esc400::range( uint16_t min, uint16_t max ) {

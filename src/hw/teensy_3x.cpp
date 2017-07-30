@@ -99,17 +99,17 @@ FASTRUN void Pulse400::handleTimerInterrupt( void ) {
     GPIOB_PSOR = pins_high.PB;
     GPIOC_PSOR = pins_high.PC;  
     GPIOD_PSOR = pins_high.PD;   
-    qctl.next = PULSE400_JMP_PONR;
-    SET_TIMER( period_min, PULSE400_ISR );
+    qctl.next = PULSE400_JMP_DEADLINE;
+    SET_TIMER( cycle_deadline, PULSE400_ISR );
     return;
   }  
-  if ( qctl.next == PULSE400_JMP_PONR ) { // Point of no return
+  if ( qctl.next == PULSE400_JMP_DEADLINE ) { // Point of no return
     if ( qctl.change ) {
       qctl.change = false;
       qctl.active = qctl.active ^ 1;
     }
     qctl.next = 0;
-    next_interval = ( queue[qctl.active][qctl.next].pw + PULSE400_MIN_PULSE ) - period_min;
+    next_interval = ( queue[qctl.active][qctl.next].pw + PULSE400_MIN_PULSE ) - cycle_deadline;
   }
   if ( next_interval == 0 ) { // Pull the pins DOWN, a bunch at a time if needed
     queue_t * q = &queue[qctl.active];  
@@ -121,7 +121,7 @@ FASTRUN void Pulse400::handleTimerInterrupt( void ) {
     qctl.next += (*q)[qctl.next].cnt;
     next_interval = (*q)[qctl.next].pw - previous_pw;
     if ( (*q)[qctl.next].id == PULSE400_END_FLAG ) { 
-      next_interval = period_max - previous_pw;
+      next_interval = cycle_width - previous_pw;
       qctl.next = PULSE400_JMP_HIGH; 
     }
   } 

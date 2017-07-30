@@ -45,9 +45,9 @@ Pulse400& Pulse400::detach( int8_t id_channel ) {
   return *this;
 }
 
-Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pw, bool no_update ) {
+Pulse400& Pulse400::pulse( int8_t id_channel, uint16_t pw, bool no_update ) {
   if ( id_channel != PULSE400_UNUSED && channel[id_channel].pin != PULSE400_UNUSED ) {
-    pw = constrain( pw, 1, period_max + PULSE400_MIN_PULSE - 1 ) - PULSE400_MIN_PULSE;
+    pw = constrain( pw, 1, cycle_width + PULSE400_MIN_PULSE - 1 ) - PULSE400_MIN_PULSE;
     if ( channel[id_channel].pw != pw ) {
       channel[id_channel].pw = pw;
       if ( no_update ) {
@@ -82,17 +82,17 @@ Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pw, bool no_update ) 
   return *this;
 }
 
-int16_t Pulse400::get_pulse( int8_t id_channel ) {
+int16_t Pulse400::pulse( int8_t id_channel ) {
   return id_channel != PULSE400_UNUSED ? channel[id_channel].pw + PULSE400_MIN_PULSE : -1;
 }
 
 Pulse400& Pulse400::frequency( uint16_t f ) {
-  period_max = ( 1000000 / f ) - PULSE400_MIN_PULSE;
+  cycle_width = ( 1000000 / f ) - PULSE400_MIN_PULSE;
   return *this;
 }
 
 Pulse400& Pulse400::deadline( uint16_t f ) {
-  period_min = f;
+  cycle_deadline = f;
   return *this;
 }
 
@@ -275,19 +275,19 @@ void Pulse400::handleTimerInterrupt( void ) {
       digitalWrite( channel[(*q)[qctl.next].id].pin, HIGH );
       qctl.next++;
     }
-    qctl.next = PULSE400_JMP_PONR;
-    SET_TIMER( period_min, PULSE400_ISR );
+    qctl.next = PULSE400_JMP_DEADLINE;
+    SET_TIMER( cycle_deadline, PULSE400_ISR );
     PINLOWD( 7 );
     return;
   } 
-  if ( qctl.next == PULSE400_JMP_PONR ) { // Point of no return 
+  if ( qctl.next == PULSE400_JMP_DEADLINE ) { // Point of no return 
     if ( qctl.change ) { // TODO: shortcut if PONR == next LOW
       qctl.change = false;
       qctl.active = qctl.active ^ 1;
       q = &queue[qctl.active];
     }
     qctl.next = 0;
-    next_interval = ( (*q)[qctl.next].pw + PULSE400_MIN_PULSE ) - period_min;
+    next_interval = ( (*q)[qctl.next].pw + PULSE400_MIN_PULSE ) - cycle_deadline;
   } 
   if ( next_interval == 0 ) {    
     uint16_t previous_pw = (*q)[qctl.next].pw;
@@ -296,7 +296,7 @@ void Pulse400::handleTimerInterrupt( void ) {
       next_interval = (*q)[++qctl.next].pw - previous_pw;
     }
     if ( (*q)[qctl.next].id == PULSE400_END_FLAG ) { 
-      next_interval = period_max - previous_pw;
+      next_interval = cycle_width - previous_pw;
       qctl.next = PULSE400_JMP_HIGH; 
     }
   } 

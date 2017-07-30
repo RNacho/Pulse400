@@ -26,18 +26,18 @@ void Pulse400::handleTimerInterrupt( void ) {
     PORTB |= pins_high.PB; // Arduino UNO optimization: flip pins per bank
     PORTC |= pins_high.PC;  
     PORTD |= pins_high.PD;
-    qctl.next = PULSE400_JMP_PONR;
-    next_interval = period_min;
-    SET_TIMER( period_min, PULSE400_ISR );
+    qctl.next = PULSE400_JMP_DEADLINE;
+    next_interval = cycle_deadline;
+    SET_TIMER( cycle_deadline, PULSE400_ISR );
     return;
   } 
-  if ( qctl.next == PULSE400_JMP_PONR ) { 
+  if ( qctl.next == PULSE400_JMP_DEADLINE ) { 
     if ( qctl.change ) {
       qctl.change = false;
       qctl.active = qctl.active ^ 1;
     }
     qctl.next = 0;
-    next_interval = ( queue[qctl.active][qctl.next].pw + PULSE400_MIN_PULSE ) - period_min;
+    next_interval = ( queue[qctl.active][qctl.next].pw + PULSE400_MIN_PULSE ) - cycle_deadline;
   } 
   if ( next_interval == 0 ) {    
     uint16_t previous_pw = (*q)[qctl.next].pw;
@@ -46,7 +46,7 @@ void Pulse400::handleTimerInterrupt( void ) {
       next_interval = (*q)[++qctl.next].pw - previous_pw;
     }
     if ( (*q)[qctl.next].id == PULSE400_END_FLAG ) {
-      next_interval = period_max - previous_pw;
+      next_interval = cycle_width - previous_pw;
       qctl.next = PULSE400_JMP_HIGH; 
     }
   } 

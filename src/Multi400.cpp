@@ -28,13 +28,13 @@ Multi400& Multi400::setSpeed( int16_t v0, int16_t v1, int16_t v2, int16_t v3, in
 
 Multi400& Multi400::speed( uint8_t no, int16_t v, bool no_update ) {
   if ( id_channel[no] > -1 && v > -1 ) {
-    pulse400.set_pulse( id_channel[no], map( constrain( v, 0, 1000 ), 0, 1000, min, max ), no_update );
+    pulse400.pulse( id_channel[no], map( constrain( v, 0, 1000 ), 0, 1000, min, max ), no_update );
   }
   return *this;
 }
 
 int16_t Multi400::speed( uint8_t no ) {
-  return id_channel[no] == -1 ? -1 : map( pulse400.get_pulse( id_channel[no] ), min, max, 1, 1000 );
+  return id_channel[no] == -1 ? -1 : map( pulse400.pulse( id_channel[no] ), min, max, 1, 1000 );
 } 
 
 Multi400& Multi400::off( void ) {
