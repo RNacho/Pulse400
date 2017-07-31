@@ -16,8 +16,9 @@
 #define PULSE400_DEFAULT_PULSE 1000
 #define PULSE400_MIN_PULSE 360
 #define PULSE400_PERIOD_MAX 2500
-#define PULSE400_START_FLAG 31
 #define PULSE400_END_FLAG 31
+#define PULSE400_JMP_HIGH 32 // fits in qctl.next (6 bit = 0..63)
+#define PULSE400_JMP_DEADLINE 33
 #define PULSE400_UNUSED 31
 
 #define PINHIGHD( _pin ) PORTD |= ( 1 << _pin );
@@ -183,11 +184,11 @@ class Pulse400 {
   Pulse400();
   int8_t attach( int8_t pin, int8_t force_id = -1 ); // Attaches pin
   Pulse400& detach( int8_t id_channel ); // Detaches and optionally frees timer
-  Pulse400& set_pulse( int8_t id_channel, uint16_t pulse_width, bool no_update = false );
-  int16_t get_pulse( int8_t id_channel );
+  Pulse400& pulse( int8_t id_channel, uint16_t pulse_width, bool no_update = false );
+  int16_t pulse( int8_t id_channel );
   Pulse400& update( void );
   Pulse400& frequency( uint16_t f );
-  Pulse400& minimum( uint16_t f = 360 );
+  Pulse400& deadline( uint16_t f = 400 );
   Pulse400& sync( void );
 
   static Pulse400 * instance;  
@@ -208,13 +209,13 @@ class Pulse400 {
 
   public: // Temporary! FIXME
   struct {
-    volatile uint8_t ptr : 6;
+    volatile uint8_t next : 6; // max 64!
     volatile uint8_t active : 1;
     volatile uint8_t change : 1;
   } qctl;
   volatile uint8_t update_cnt = 0;
-  volatile uint16_t period_min = PULSE400_MIN_PULSE;
-  volatile uint16_t period_max = PULSE400_PERIOD_MAX - PULSE400_MIN_PULSE;
+  volatile uint16_t cycle_deadline = PULSE400_MIN_PULSE;
+  volatile uint16_t cycle_width = PULSE400_PERIOD_MAX - PULSE400_MIN_PULSE;
 
   channel_struct_t channel[PULSE400_MAX_CHANNELS];
   queue_t queue[2] = { { { PULSE400_END_FLAG } }, { { PULSE400_END_FLAG } } };

@@ -30,13 +30,13 @@ bool Servo400::attached() {
 // Write pulse width in microseconds 
 
 void Servo400::writeMicroseconds(int value) {
-  pulse400.set_pulse( id_channel, value );
+  pulse400.pulse( id_channel, value );
 }
 
 // returns current pulse width in microseconds for this servo
 
 int Servo400::readMicroseconds() {
-  return id_channel == -1 ? -1 : map( pulse400.get_pulse( id_channel ), min, max, 1, 1000 );
+  return id_channel == -1 ? -1 : map( pulse400.pulse( id_channel ), min, max, 1, 1000 );
 }
           
 // if value is < 200 it's treated as an angle, otherwise as pulse width in microseconds 

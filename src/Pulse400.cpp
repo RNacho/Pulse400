@@ -45,9 +45,9 @@ Pulse400& Pulse400::detach( int8_t id_channel ) {
   return *this;
 }
 
-Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pw, bool no_update ) {
+Pulse400& Pulse400::pulse( int8_t id_channel, uint16_t pw, bool no_update ) {
   if ( id_channel != PULSE400_UNUSED && channel[id_channel].pin != PULSE400_UNUSED ) {
-    pw = constrain( pw, 1, period_max + PULSE400_MIN_PULSE - 1 ) - PULSE400_MIN_PULSE;
+    pw = constrain( pw, 1, cycle_width + PULSE400_MIN_PULSE - 1 ) - PULSE400_MIN_PULSE;
     if ( channel[id_channel].pw != pw ) {
       channel[id_channel].pw = pw;
       if ( no_update ) {
@@ -82,17 +82,17 @@ Pulse400& Pulse400::set_pulse( int8_t id_channel, uint16_t pw, bool no_update ) 
   return *this;
 }
 
-int16_t Pulse400::get_pulse( int8_t id_channel ) {
+int16_t Pulse400::pulse( int8_t id_channel ) {
   return id_channel != PULSE400_UNUSED ? channel[id_channel].pw + PULSE400_MIN_PULSE : -1;
 }
 
 Pulse400& Pulse400::frequency( uint16_t f ) {
-  period_max = ( 1000000 / f ) - PULSE400_MIN_PULSE;
+  cycle_width = ( 1000000 / f ) - PULSE400_MIN_PULSE;
   return *this;
 }
 
-Pulse400& Pulse400::minimum( uint16_t f ) {
-  period_min = f;
+Pulse400& Pulse400::deadline( uint16_t f ) {
+  cycle_deadline = f;
   return *this;
 }
 
@@ -226,7 +226,7 @@ void PULSE400_ISR( void ) {
 }
 
 void Pulse400::timer_start( void ) {
-  qctl.ptr = PULSE400_START_FLAG;
+  qctl.next = PULSE400_JMP_HIGH;
   instance = this;
 #ifdef PULSE400_USE_INTERVALTIMER
   timer.begin( PULSE400_ISR, 2 ); // interval 1 doesn't seem to work on Teensy LC
@@ -247,7 +247,7 @@ void Pulse400::timer_stop( void ) {
 
 Pulse400& Pulse400::sync( void ) {
   cli();
-  if ( qctl.ptr == PULSE400_START_FLAG ) { 
+  if ( qctl.next == PULSE400_JMP_HIGH ) { 
 #ifdef PULSE400_USE_INTERVALTIMER
     timer.end();
     handleTimerInterrupt();
@@ -269,28 +269,35 @@ Pulse400& Pulse400::sync( void ) {
 void Pulse400::handleTimerInterrupt( void ) {
   int16_t next_interval = 0;
   queue_t * q = &queue[qctl.active];
-  if ( qctl.ptr == PULSE400_START_FLAG ) { 
-    if ( qctl.change ) {
+  if ( qctl.next == PULSE400_JMP_HIGH ) { // Set all pins HIGH
+    qctl.next = 0; // Point the queue pointer at the start of the queue
+    while( (*q)[qctl.next].id != PULSE400_END_FLAG ) {
+      digitalWrite( channel[(*q)[qctl.next].id].pin, HIGH );
+      qctl.next++;
+    }
+    qctl.next = PULSE400_JMP_DEADLINE;
+    SET_TIMER( cycle_deadline, PULSE400_ISR );
+    PINLOWD( 7 );
+    return;
+  } 
+  if ( qctl.next == PULSE400_JMP_DEADLINE ) { // Point of no return 
+    if ( qctl.change ) { // TODO: shortcut if PONR == next LOW
       qctl.change = false;
       qctl.active = qctl.active ^ 1;
       q = &queue[qctl.active];
     }
-    qctl.ptr = 0; // Point the queue pointer at the start of the queue
-    while( (*q)[qctl.ptr].id != PULSE400_END_FLAG ) {
-      digitalWrite( channel[(*q)[qctl.ptr].id].pin, HIGH );
-      qctl.ptr++;
-    }
-    qctl.ptr = 0;
-    next_interval = (*q)[qctl.ptr].pw + PULSE400_MIN_PULSE;
-  } else {    
-    uint16_t previous_pw = (*q)[qctl.ptr].pw;
+    qctl.next = 0;
+    next_interval = ( (*q)[qctl.next].pw + PULSE400_MIN_PULSE ) - cycle_deadline;
+  } 
+  if ( next_interval == 0 ) {    
+    uint16_t previous_pw = (*q)[qctl.next].pw;
     while ( !next_interval ) { // Process equal pulse widths in the same timer interrupt period
-      digitalWrite( channel[(*q)[qctl.ptr].id].pin, LOW );
-      next_interval = (*q)[++qctl.ptr].pw - previous_pw;
+      digitalWrite( channel[(*q)[qctl.next].id].pin, LOW );
+      next_interval = (*q)[++qctl.next].pw - previous_pw;
     }
-    if ( (*q)[qctl.ptr].id == PULSE400_END_FLAG ) { 
-      next_interval = period_max - previous_pw;
-      qctl.ptr = PULSE400_START_FLAG; 
+    if ( (*q)[qctl.next].id == PULSE400_END_FLAG ) { 
+      next_interval = cycle_width - previous_pw;
+      qctl.next = PULSE400_JMP_HIGH; 
     }
   } 
   SET_TIMER( next_interval, PULSE400_ISR );
