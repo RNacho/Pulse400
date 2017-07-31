@@ -214,7 +214,7 @@ class Pulse400 {
   } qctl;
   volatile uint8_t update_cnt = 0;
   volatile uint16_t period_min = PULSE400_MIN_PULSE;
-  volatile uint16_t period_max = PULSE400_PERIOD_MAX;
+  volatile uint16_t period_max = PULSE400_PERIOD_MAX - PULSE400_MIN_PULSE;
 
   channel_struct_t channel[PULSE400_MAX_CHANNELS];
   queue_t queue[2] = { { { PULSE400_END_FLAG } }, { { PULSE400_END_FLAG } } };
