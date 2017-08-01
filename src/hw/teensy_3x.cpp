@@ -1,5 +1,7 @@
 #include <Pulse400.h>
 
+#define PULSE400_MINIMUM_INTERVAL 4
+
 #if defined( __TEENSY_3X__ )  && defined( PULSE400_OPTIMIZE_TEENSY_3X )
 static struct { uint8_t port; uint8_t bit; } teensy_pins[] = { 
 // A=0, B=1, C=2, D=3, E=4 ports: LC port 3 & 4 differ
@@ -62,12 +64,14 @@ void Pulse400::init_optimization( queue_struct_t queue[], int8_t queue_cnt ) {
   }  
   reg_struct_t bits;
   int16_t skip_cnt = 1;
-  int16_t last_pw = -1;
   queue_cnt--; // Counter points to PULSE400_END_FLAG entry, decrement for the first entry
   while ( queue_cnt >= 0 ) { // Iterate for end to beginning
     // Create pin bitmaps for every step of the queue for turning pins off again
-    // Merge bitmaps of entries with the same pulse width and increment the skip counter
-    if ( queue[queue_cnt].pw == last_pw ) {
+    // Merge bitmaps of entries with (almost) the same pulse width and increment the skip counter
+    Serial.print( last_pw );
+    Serial.print( " - " );
+    Serial.println( queue[queue_cnt].pw );
+    if ( last_pw - queue[queue_cnt].pw <= PULSE400_MINIMUM_INTERVAL ) { 
       skip_cnt++;
     } else {
       bits.PA = bits.PB = bits.PC = bits.PD = 0;
@@ -84,6 +88,7 @@ void Pulse400::init_optimization( queue_struct_t queue[], int8_t queue_cnt ) {
     last_pw = queue[queue_cnt].pw;
     queue_cnt--;
   } 
+  Serial.println( "--" );
 }
 
 // ISR optimized for Teensy 3.x/LC
