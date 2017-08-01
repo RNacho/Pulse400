@@ -277,7 +277,6 @@ void Pulse400::handleTimerInterrupt( void ) {
     }
     qctl.next = PULSE400_JMP_DEADLINE;
     SET_TIMER( cycle_deadline, PULSE400_ISR );
-    PINLOWD( 7 );
     return;
   } 
   if ( qctl.next == PULSE400_JMP_DEADLINE ) { // Point of no return 
@@ -291,7 +290,8 @@ void Pulse400::handleTimerInterrupt( void ) {
   } 
   if ( next_interval == 0 ) {    
     uint16_t previous_pw = (*q)[qctl.next].pw;
-    while ( !next_interval ) { // Process equal pulse widths in the same timer interrupt period
+    // Possible fix: if pulses too close together merge them!!! PULSE400_MINIMUM_INTERVAL
+    while ( next_interval ) { // Process equal pulse widths in the same timer interrupt period
       digitalWrite( channel[(*q)[qctl.next].id].pin, LOW );
       next_interval = (*q)[++qctl.next].pw - previous_pw;
     }

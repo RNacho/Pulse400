@@ -64,13 +64,11 @@ void Pulse400::init_optimization( queue_struct_t queue[], int8_t queue_cnt ) {
   }  
   reg_struct_t bits;
   int16_t skip_cnt = 1;
+  uint16_t last_pw = 0xFFfF;
   queue_cnt--; // Counter points to PULSE400_END_FLAG entry, decrement for the first entry
   while ( queue_cnt >= 0 ) { // Iterate for end to beginning
     // Create pin bitmaps for every step of the queue for turning pins off again
     // Merge bitmaps of entries with (almost) the same pulse width and increment the skip counter
-    Serial.print( last_pw );
-    Serial.print( " - " );
-    Serial.println( queue[queue_cnt].pw );
     if ( last_pw - queue[queue_cnt].pw <= PULSE400_MINIMUM_INTERVAL ) { 
       skip_cnt++;
     } else {
