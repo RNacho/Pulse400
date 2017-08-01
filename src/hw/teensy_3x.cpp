@@ -2,6 +2,9 @@
 
 #define PULSE400_MINIMUM_INTERVAL 4
 
+// Teensy 3.2 accepts a 800/803 interval ( breaks up at 802 )
+// Teensy LC  accepts a 800/802 interval ( breaks up at 801, but differently! )
+
 #if defined( __TEENSY_3X__ )  && defined( PULSE400_OPTIMIZE_TEENSY_3X )
 static struct { uint8_t port; uint8_t bit; } teensy_pins[] = { 
 // A=0, B=1, C=2, D=3, E=4 ports: LC port 3 & 4 differ

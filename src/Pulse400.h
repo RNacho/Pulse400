@@ -1,5 +1,9 @@
 #pragma once 
 
+// BUGS:
+// Timer(s) need a minimum # of micros between interrupts, 4 for teenys, 50 (?!) for UNO? Fix this?
+// pulse400.deadline() with values > 1000 doesn't waork (ruins signal), why???
+
 #include <Arduino.h>
 
 // Configure number of channels here
