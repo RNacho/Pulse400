@@ -86,7 +86,6 @@ void Pulse400::init_optimization( queue_struct_t queue[], int8_t queue_cnt ) {
     last_pw = queue[queue_cnt].pw;
     queue_cnt--;
   } 
-  Serial.println( "--" );
 }
 
 // ISR optimized for Teensy 3.x/LC
