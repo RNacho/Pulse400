@@ -192,7 +192,7 @@ class Pulse400 {
   int16_t pulse( int8_t id_channel );
   Pulse400& update( void );
   Pulse400& frequency( uint16_t f );
-  Pulse400& deadline( uint16_t f = 400 );
+  Pulse400& deadline( int16_t f = 400 );
   Pulse400& sync( void );
 
   static Pulse400 * instance;  

@@ -91,7 +91,7 @@ Pulse400& Pulse400::frequency( uint16_t f ) {
   return *this;
 }
 
-Pulse400& Pulse400::deadline( uint16_t f ) {
+Pulse400& Pulse400::deadline( int16_t f ) {
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
     if ( channel[ch].pin != PULSE400_UNUSED ) {
       if ( pulse( ch ) < f ) {
