@@ -2,7 +2,6 @@
 
 // BUGS:
 // Timer(s) need a minimum # of micros between interrupts, 4 for teenys, 50 (?!) for UNO? Fix this?
-// pulse400.deadline() with values > 1000 doesn't waork (ruins signal), why???
 
 #include <Arduino.h>
 
@@ -122,7 +121,7 @@ class Esc400 {
   Esc400& begin( int8_t pin );
   Esc400& speed( uint16_t v ); 
   int16_t speed( void ); 
-  Esc400& range( uint16_t min, uint16_t max ); 
+  Esc400& outputRange( uint16_t min, uint16_t max ); 
   Esc400& end( void );
   Esc400& frequency( uint16_t f );
   
@@ -139,11 +138,11 @@ class Multi400 {
   
   public:
   Multi400& begin( int8_t pin0 = -1, int8_t pin1 = -1, int8_t pin2 = -1, int8_t pin3 = -1, int8_t pin4 = -1, int8_t pin5 = -1, int8_t pin6 = -1, int8_t pin7 = -1 );
-  Multi400& setSpeed( int16_t v0, int16_t v1 = -1, int16_t v2 = -1, int16_t v3 = -1, int16_t v4 = -1, int16_t v5 = -1 , int16_t v6 = -1, int16_t v7 = -1 ); 
+  Multi400& set( int16_t v0, int16_t v1 = -1, int16_t v2 = -1, int16_t v3 = -1, int16_t v4 = -1, int16_t v5 = -1 , int16_t v6 = -1, int16_t v7 = -1 ); 
   Multi400& speed( uint8_t no, int16_t v, bool no_update = false );
   int16_t speed( uint8_t no );
   Multi400& off( void );
-  Multi400& range( uint16_t min, uint16_t max ); 
+  Multi400& outputRange( uint16_t min, uint16_t max, uint16_t minPulse = -1 ); 
   Multi400& end( void );
   Multi400& autosync( bool v = true );
   Multi400& frequency( uint16_t f );
@@ -192,7 +191,7 @@ class Pulse400 {
   int16_t pulse( int8_t id_channel );
   Pulse400& update( void );
   Pulse400& frequency( uint16_t f );
-  Pulse400& deadline( int16_t f = 400 );
+  Pulse400& minPulse( int16_t f = 360 );
   Pulse400& sync( void );
 
   static Pulse400 * instance;  

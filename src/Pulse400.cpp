@@ -9,6 +9,7 @@ Pulse400::Pulse400( void ) {
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
     channel[ch].pin = PULSE400_UNUSED;
     channel[ch].pw = PULSE400_DEFAULT_PULSE - PULSE400_MIN_PULSE;
+    channel[ch].pw = PULSE400_DEFAULT_PULSE - PULSE400_MIN_PULSE;
   }  
   qctl.active = 0;  
   qctl.change = 0;  
@@ -91,15 +92,15 @@ Pulse400& Pulse400::frequency( uint16_t f ) {
   return *this;
 }
 
-Pulse400& Pulse400::deadline( int16_t f ) {
+Pulse400& Pulse400::minPulse( int16_t f ) {
   for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
     if ( channel[ch].pin != PULSE400_UNUSED ) {
       if ( pulse( ch ) < f ) {
-        pulse( ch, f );
+        pulse( ch, f ); // Force pulse to minimum
       }
     }
   }
-  cycle_deadline = f;
+  cycle_deadline = f; // Only then set the deadline
   return *this;
 }
 

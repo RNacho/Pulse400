@@ -14,7 +14,7 @@ int16_t Esc400::speed() {
   return id_channel == -1 ? -1 : map( pulse400.pulse( id_channel ), min, max, 1, 1000 );
 }
 
-Esc400& Esc400::range( uint16_t min, uint16_t max ) {
+Esc400& Esc400::outputRange( uint16_t min, uint16_t max ) {
   this->min = min;
   this->max = max;
   return *this;

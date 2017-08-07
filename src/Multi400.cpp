@@ -12,7 +12,7 @@ Multi400& Multi400::begin( int8_t pin0, int8_t pin1, int8_t pin2, int8_t pin3, i
   return *this;
 }
 
-Multi400& Multi400::setSpeed( int16_t v0, int16_t v1, int16_t v2, int16_t v3, int16_t v4, int16_t v5, int16_t v6, int16_t v7 ) {
+Multi400& Multi400::set( int16_t v0, int16_t v1, int16_t v2, int16_t v3, int16_t v4, int16_t v5, int16_t v6, int16_t v7 ) {
   speed( 0, v0, true );
   speed( 1, v1, true );
   speed( 2, v2, true );
@@ -55,9 +55,11 @@ Multi400& Multi400::frequency( uint16_t f ) {
   return *this;
 }
 
-Multi400& Multi400::range( uint16_t min, uint16_t max ) {
+Multi400& Multi400::outputRange( uint16_t min, uint16_t max, uint16_t minPulse /* -1 */) {
   this->min = min;
   this->max = max;
+  set( 0, 0, 0, 0, 0, 0, 0, 0 );
+  pulse400.minPulse( minPulse > -1 ? minPulse : min );
   return *this;
 }
 
