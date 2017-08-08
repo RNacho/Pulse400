@@ -43,7 +43,7 @@ Multi400& Multi400::off( void ) {
   return *this;
 }
 
-Multi400& Multi400::enable( bool v ) {
+Multi400& Multi400::enabled( bool v ) {
   off();
   disabled = !v;
   return *this;

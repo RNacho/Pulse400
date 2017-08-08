@@ -147,7 +147,7 @@ class Multi400 {
   Multi400& autosync( bool v = true );
   Multi400& sync();
   Multi400& frequency( uint16_t f );
-  Multi400& enable( bool v );
+  Multi400& enabled( bool v );
   
   private:
   bool pulse_sync, disabled;
