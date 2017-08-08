@@ -38,15 +38,17 @@ int16_t Multi400::speed( uint8_t no ) {
 } 
 
 Multi400& Multi400::off( void ) {
-  for ( int i = 0; i < MULTI400_NO_OF_CHANNELS; i++ ) 
-    if ( id_channel[i] > -1 )
-      speed( id_channel[i], 0, true );
-  pulse400.update();  
+  set( 0, 0, 0, 0, 0, 0, 0, 0 );
   return *this;
 }
 
 Multi400& Multi400::autosync( bool v /* = true */ ) {
   pulse_sync = v;  
+  return *this;
+}
+
+Multi400& Multi400::sync() {
+  pulse400.sync();  
   return *this;
 }
 
@@ -58,7 +60,7 @@ Multi400& Multi400::frequency( uint16_t f ) {
 Multi400& Multi400::outputRange( uint16_t min, uint16_t max, uint16_t minPulse /* -1 */) {
   this->min = min;
   this->max = max;
-  set( 0, 0, 0, 0, 0, 0, 0, 0 );
+  off();
   pulse400.minPulse( minPulse > -1 ? minPulse : min );
   return *this;
 }
