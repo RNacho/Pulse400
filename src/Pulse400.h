@@ -142,14 +142,15 @@ class Multi400 {
   Multi400& speed( uint8_t no, int16_t v, bool no_update = false );
   int16_t speed( uint8_t no );
   Multi400& off( void );
-  Multi400& outputRange( uint16_t min, uint16_t max, uint16_t minPulse = -1 ); 
+  Multi400& outputRange( uint16_t min, uint16_t max, int16_t minPulse = -1 ); 
   Multi400& end( void );
   Multi400& autosync( bool v = true );
   Multi400& sync();
   Multi400& frequency( uint16_t f );
+  Multi400& enable( bool v );
   
   private:
-  bool pulse_sync;
+  bool pulse_sync, disabled;
   uint16_t min = 1000;
   uint16_t max = 2000;
   

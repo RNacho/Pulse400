@@ -93,14 +93,16 @@ Pulse400& Pulse400::frequency( uint16_t f ) {
 }
 
 Pulse400& Pulse400::minPulse( int16_t f ) {
-  for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
-    if ( channel[ch].pin != PULSE400_UNUSED ) {
-      if ( pulse( ch ) < f ) {
-        pulse( ch, f ); // Force pulse to minimum
+  if ( f >= 360 && f < 2500 ) {
+    for ( int ch = 0; ch < PULSE400_MAX_CHANNELS; ch++ ) {
+      if ( channel[ch].pin != PULSE400_UNUSED ) {
+        if ( pulse( ch ) < f ) {
+          pulse( ch, f ); // Force pulse to minimum
+        }
       }
     }
+    cycle_deadline = f; // Only then set the deadline
   }
-  cycle_deadline = f; // Only then set the deadline
   return *this;
 }
 

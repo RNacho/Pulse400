@@ -27,7 +27,7 @@ Multi400& Multi400::set( int16_t v0, int16_t v1, int16_t v2, int16_t v3, int16_t
 }
 
 Multi400& Multi400::speed( uint8_t no, int16_t v, bool no_update ) {
-  if ( v > -1 ) {
+  if ( v > -1 && !disabled ) {
     pulse400.pulse( no, map( constrain( v, 0, 1000 ), 0, 1000, min, max ), no_update );
   }
   return *this;
@@ -40,6 +40,12 @@ int16_t Multi400::speed( uint8_t no ) {
 
 Multi400& Multi400::off( void ) {
   set( 0, 0, 0, 0, 0, 0, 0, 0 );
+  return *this;
+}
+
+Multi400& Multi400::enable( bool v ) {
+  off();
+  disabled = !v;
   return *this;
 }
 
@@ -58,7 +64,7 @@ Multi400& Multi400::frequency( uint16_t f ) {
   return *this;
 }
 
-Multi400& Multi400::outputRange( uint16_t min, uint16_t max, uint16_t minPulse /* -1 */) {
+Multi400& Multi400::outputRange( uint16_t min, uint16_t max, int16_t minPulse /* -1 */) {
   this->min = min;
   this->max = max;
   off();
