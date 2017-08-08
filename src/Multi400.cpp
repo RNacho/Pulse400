@@ -35,7 +35,7 @@ Multi400& Multi400::speed( uint8_t no, int16_t v, bool no_update ) {
 
 int16_t Multi400::speed( uint8_t no ) {
   int v = pulse400.pulse( no );
-  return v == -1 ? -1 : map( v, min, max, 1, 1000 );
+  return v == -1 ? -1 : map( v, min, max, 0, 1000 );
 } 
 
 Multi400& Multi400::off( void ) {
