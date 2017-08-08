@@ -147,8 +147,6 @@ class Multi400 {
   Multi400& autosync( bool v = true );
   Multi400& sync();
   Multi400& frequency( uint16_t f );
-
-  int8_t id_channel[MULTI400_NO_OF_CHANNELS] =  { -1, -1, -1, -1, -1, -1, -1, -1 };
   
   private:
   bool pulse_sync;
