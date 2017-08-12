@@ -1,5 +1,10 @@
 #include <Pulse400.h>
 
+// Solutions for switching interval:
+// - Continually switch from CTC mode 4 to CTC mode 12: tried, no improvement
+// - Switch from Timer1 (long intervals) to Timer2 (short intervals)?
+// - Use capture timer mode???
+
 #if defined( __AVR_ATmega328P__ ) && defined( PULSE400_OPTIMIZE_ARDUINO_UNO ) 
 
 void Pulse400::init_optimization( queue_struct_t queue[], int8_t queue_cnt ) {

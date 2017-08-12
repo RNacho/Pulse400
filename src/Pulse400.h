@@ -4,6 +4,7 @@
 // Timer(s) need a minimum # of micros between interrupts, 4 for teenys, 50 (?!) for UNO? Fix this?
 
 #include <Arduino.h>
+#include <timer/TwoTimer.hpp>
 
 // Configure number of channels here
 
