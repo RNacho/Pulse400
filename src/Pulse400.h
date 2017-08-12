@@ -68,7 +68,6 @@ class Servo400;
 class Multi400;
 class Pulse400;
 
-extern Pulse400 pulse400;
 extern void PULSE400_ISR( void );
 
 struct channel_struct_t { 
@@ -118,7 +117,7 @@ typedef queue_struct_t queue_t[PULSE400_MAX_CHANNELS + 1];
 class Esc400 {
   
   public:
-  Esc400& begin( int8_t pin );
+  Esc400& begin( Pulse400&, int8_t pin );
   Esc400& speed( uint16_t v ); 
   int16_t speed( void ); 
   Esc400& outputRange( uint16_t min, uint16_t max ); 
@@ -126,6 +125,7 @@ class Esc400 {
   Esc400& frequency( uint16_t f );
   
   private:
+  Pulse400 * pulse400;
   int16_t id_channel = -1;
   uint16_t min = 1000;
   uint16_t max = 2000;
@@ -137,6 +137,7 @@ class Esc400 {
 class Multi400 {
   
   public:
+  Multi400( Pulse400& pulse400 );
   Multi400& begin( int8_t pin0 = -1, int8_t pin1 = -1, int8_t pin2 = -1, int8_t pin3 = -1, int8_t pin4 = -1, int8_t pin5 = -1, int8_t pin6 = -1, int8_t pin7 = -1 );
   Multi400& set( int16_t v0, int16_t v1 = -1, int16_t v2 = -1, int16_t v3 = -1, int16_t v4 = -1, int16_t v5 = -1 , int16_t v6 = -1, int16_t v7 = -1 ); 
   Multi400& speed( uint8_t no, int16_t v, bool no_update = false );
@@ -150,6 +151,7 @@ class Multi400 {
   Multi400& enabled( bool v );
   
   private:
+  Pulse400 * pulse400;
   bool pulse_sync, disabled;
   uint16_t min = 1000;
   uint16_t max = 2000;
@@ -161,8 +163,8 @@ class Multi400 {
 class Servo400 {
   
   public:
-  uint8_t attach(int pin );           // attach the given pin to the next free channel, sets pinMode, returns channel number or 0 if failure
-  uint8_t attach(int pin, int min, int max ); // as above but also sets min and max values for writes. 
+  uint8_t attach( Pulse400& pulse400, int pin );           // attach the given pin to the next free channel, sets pinMode, returns channel number or 0 if failure
+  uint8_t attach( Pulse400& pulse400, int pin, int min, int max ); // as above but also sets min and max values for writes. 
   void detach();
   void write(int value);             // if value is < 200 its treated as an angle, otherwise as pulse width in microseconds 
   void writeMicroseconds(int value); // Write pulse width in microseconds 
@@ -172,6 +174,7 @@ class Servo400 {
   void frequency( uint16_t f );
   
   private:
+  Pulse400 * pulse400;
   int16_t id_channel = -1;
   uint16_t min = 544;
   uint16_t max = 2400;
