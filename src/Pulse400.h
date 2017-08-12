@@ -9,6 +9,7 @@
 
 #define PULSE400_MAX_CHANNELS 8 // Maximum value: 31
 #define MULTI400_NO_OF_CHANNELS 8 // Maximum value: 31
+#define RC400_NO_OF_CHANNELS 6
 
 // Turn options on/off for debugging/testing/development
 
@@ -234,3 +235,42 @@ class Pulse400 {
 
 };
 
+typedef struct {
+    uint8_t pin;
+    uint16_t value;
+    uint32_t last_high;
+    uint16_t min, max;  // Save 2x6 bytes by changing into int8_t offsets from 1000/2000
+} rc400_channel_struct;
+
+#ifndef __TEENSY_3X__
+typedef struct {
+  byte reg;
+  byte channel[8];
+} rc400_int_struct;
+#endif
+
+
+class Rc400 {
+ public:
+  void pwm( int8_t p0, int8_t p1 = -1, int8_t p2 = -1, int8_t p3 = -1, int8_t p4 = -1, int8_t p5 = -1 );
+  void ppm( int8_t p0 );
+  int read( int ch );
+  bool connected();
+  void end();
+  
+  static Rc400 * instance;
+  void handleInterruptPWM( int pch );
+  void handleInterruptPPM();
+  void register_pin_change_pwm( byte int_no, byte int_mask, byte bits );
+
+ private:
+  void set_channel( int ch, int pin );
+  rc400_channel_struct volatile channel[RC400_NO_OF_CHANNELS];
+#ifndef __TEENSY_3X__    
+  rc400_int_struct volatile int_state[3];
+#endif
+  uint8_t volatile ppm_pulse_counter;
+  uint32_t volatile ppm_last_pulse;
+  uint8_t max_used_channel;
+    
+};
