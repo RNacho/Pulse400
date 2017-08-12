@@ -25,6 +25,8 @@
 #define PULSE400_JMP_DEADLINE 33
 #define PULSE400_UNUSED 31
 
+#define RC400_IDLE_DISCONNECT 100000
+
 #define PINHIGHD( _pin ) PORTD |= ( 1 << _pin );
 #define PINLOWD( _pin ) PORTD &= ~( 1 << _pin );
 
@@ -239,7 +241,6 @@ typedef struct {
     uint8_t pin;
     uint16_t value;
     uint32_t last_high;
-    uint16_t min, max;  // Save 2x6 bytes by changing into int8_t offsets from 1000/2000
 } rc400_channel_struct;
 
 #ifndef __TEENSY_3X__
@@ -271,6 +272,6 @@ class Rc400 {
 #endif
   uint8_t volatile ppm_pulse_counter;
   uint32_t volatile ppm_last_pulse;
-  uint8_t max_used_channel;
+  uint32_t volatile last_interrupt;
     
 };

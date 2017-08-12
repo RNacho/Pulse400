@@ -2,21 +2,6 @@
 
 Rc400 * Rc400::instance; // Only one instance allowed 
 
-void Rc400::ppm( int8_t p0 ) { // Pulse Position Modulation
-  for ( int ch = 0; ch < RC400_NO_OF_CHANNELS; ch++ ) {
-    channel[ch].pin = -1;
-  }
-  channel[0].pin = p0;
-  instance = this;
-  pinMode( channel[0].pin, INPUT_PULLUP );
-#ifdef __AVR_ATmega328P__
-  // Oops PPM is not yet implemented on UNO!
-#else
-  attachInterrupt( digitalPinToInterrupt( channel[0].pin ), []() { instance->handleInterruptPPM(); }, RISING );
-  max_used_channel = 5;
-#endif
-}
-
 void Rc400::pwm( int8_t p0, int8_t p1, int8_t p2, int8_t p3, int8_t p4, int8_t p5  ) { 
   channel[0].pin = p0;
   channel[1].pin = p1;
@@ -25,10 +10,10 @@ void Rc400::pwm( int8_t p0, int8_t p1, int8_t p2, int8_t p3, int8_t p4, int8_t p
   channel[4].pin = p4;
   channel[5].pin = p5;
   instance = this;
+  last_interrupt = micros() - RC400_IDLE_DISCONNECT;
   for ( int ch = 0; ch < RC400_NO_OF_CHANNELS; ch++ ) {
     if ( channel[ch].pin > -1 ) {
       pinMode( channel[ch].pin, INPUT_PULLUP );
-      max_used_channel = ch;
     }
   }
 #ifdef __AVR_ATmega328P__
@@ -45,12 +30,34 @@ void Rc400::pwm( int8_t p0, int8_t p1, int8_t p2, int8_t p3, int8_t p4, int8_t p
 #endif  
 }
 
+void Rc400::ppm( int8_t p0 ) { // Pulse Position Modulation
+  for ( int ch = 0; ch < RC400_NO_OF_CHANNELS; ch++ ) {
+    channel[ch].pin = -1;
+  }
+  channel[0].pin = p0;
+  instance = this;
+  last_interrupt = micros() - RC400_IDLE_DISCONNECT;
+  pinMode( channel[0].pin, INPUT_PULLUP );
+#ifdef __AVR_ATmega328P__
+  // Oops PPM is not yet implemented on UNO!
+#else
+  attachInterrupt( digitalPinToInterrupt( channel[0].pin ), []() { instance->handleInterruptPPM(); }, RISING );
+#endif
+}
+
 int Rc400::read( int ch ) {
   return channel[ch].pin > -1 ? channel[ch].value : -1;
 }
 
 bool Rc400::connected() {
-  return true;
+  cli();
+  if ( micros() - last_interrupt >= RC400_IDLE_DISCONNECT ) {
+    sei();
+    return false;
+  } else {
+    sei();
+    return true;
+  }
 }
 
 void Rc400::end() {
@@ -70,8 +77,6 @@ void Rc400::end() {
     channel[ch].pin = -1;
   }
 }
-
-
 
 #ifndef __TEENSY_3X__
 
@@ -131,6 +136,7 @@ void Rc400::register_pin_change_pwm( byte int_no, byte int_mask, byte bits ) {
     }
   }
   int_state[int_no].reg = bits;  
+  last_interrupt = micros();
 }
 
 // The Uno's micros() funtion has only a 4 us resolution
@@ -150,6 +156,7 @@ void Rc400::handleInterruptPWM( int ch ) { // ch = physical channel no
   } else {
     channel[ch].value = micros() - channel[ch].last_high; 
   }
+  last_interrupt = micros();
 }
 
 void Rc400::handleInterruptPPM() {
@@ -162,7 +169,7 @@ void Rc400::handleInterruptPPM() {
     }        
     ppm_pulse_counter++;
   }
-  ppm_last_pulse = micros();
+  last_interrupt = ppm_last_pulse = micros();
 }
 
 #endif
