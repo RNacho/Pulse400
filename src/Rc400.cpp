@@ -16,17 +16,17 @@ void Rc400::pwm( int8_t p0, int8_t p1, int8_t p2, int8_t p3, int8_t p4, int8_t p
       pinMode( channel[ch].pin, INPUT_PULLUP );
     }
   }
-#ifdef __AVR_ATmega328P__
-  for ( int ch = 0; ch < RC400_NO_OF_CHANNELS; ch++ ) {
-    if ( channel[ch].pin > -1 ) set_channel( ch, channel[ch].pin );
-  }
-#else
+#ifdef __TEENSY_3X__
   if ( channel[0].pin > -1 ) attachInterrupt( digitalPinToInterrupt( channel[0].pin ), []() { instance->handleInterruptPWM( 0 ); }, CHANGE );  
   if ( channel[1].pin > -1 ) attachInterrupt( digitalPinToInterrupt( channel[1].pin ), []() { instance->handleInterruptPWM( 1 ); }, CHANGE );  
   if ( channel[2].pin > -1 ) attachInterrupt( digitalPinToInterrupt( channel[2].pin ), []() { instance->handleInterruptPWM( 2 ); }, CHANGE );  
   if ( channel[3].pin > -1 ) attachInterrupt( digitalPinToInterrupt( channel[3].pin ), []() { instance->handleInterruptPWM( 3 ); }, CHANGE );  
   if ( channel[4].pin > -1 ) attachInterrupt( digitalPinToInterrupt( channel[4].pin ), []() { instance->handleInterruptPWM( 4 ); }, CHANGE );  
   if ( channel[5].pin > -1 ) attachInterrupt( digitalPinToInterrupt( channel[5].pin ), []() { instance->handleInterruptPWM( 5 ); }, CHANGE );
+#else 
+  for ( int ch = 0; ch < RC400_NO_OF_CHANNELS; ch++ ) {
+    if ( channel[ch].pin > -1 ) set_channel( ch, channel[ch].pin );
+  }  
 #endif  
 }
 
@@ -38,10 +38,10 @@ void Rc400::ppm( int8_t p0 ) { // Pulse Position Modulation
   instance = this;
   last_interrupt = micros() - RC400_IDLE_DISCONNECT;
   pinMode( channel[0].pin, INPUT_PULLUP );
-#ifdef __AVR_ATmega328P__
-  // Oops PPM is not yet implemented on UNO!
-#else
+#ifdef __TEENSY_3X__
   attachInterrupt( digitalPinToInterrupt( channel[0].pin ), []() { instance->handleInterruptPPM(); }, RISING );
+#else   
+  // Oops PPM is not yet implemented on UNO!
 #endif
 }
 
@@ -78,8 +78,34 @@ void Rc400::end() {
   }
 }
 
-#ifndef __TEENSY_3X__
+#ifdef __TEENSY_3X__
 
+// Code for Teensy 3.x/LC and any other uController that supports pin change interrupts for any pin  
+  
+void Rc400::handleInterruptPWM( int ch ) { // ch = physical channel no
+  if ( digitalRead( channel[ch].pin ) ) {
+    channel[ch].last_high = micros();    
+  } else {
+    channel[ch].value = micros() - channel[ch].last_high; 
+  }
+  last_interrupt = micros();
+}
+
+void Rc400::handleInterruptPPM() {
+  uint32_t delta = micros() - ppm_last_pulse;
+  if ( delta > 4000 ) { // Reset pulse_counter on long gap
+    ppm_pulse_counter = 0;
+  } else {
+    if ( ppm_pulse_counter < RC400_NO_OF_CHANNELS ) {
+      channel[ppm_pulse_counter].value = delta;
+    }        
+    ppm_pulse_counter++;
+  }
+  last_interrupt = ppm_last_pulse = micros();
+}
+
+#else 
+  
 // Code for the Arduino UNO that has shared interrupts per pin register
 
 // Set up the pin change interrupt for a channel/pin combo
@@ -145,31 +171,5 @@ void Rc400::register_pin_change_pwm( byte int_no, byte int_mask, byte bits ) {
 ISR (PCINT0_vect) { Rc400::instance->register_pin_change_pwm( 0, PCMSK0, PINB ); }
 ISR (PCINT1_vect) { Rc400::instance->register_pin_change_pwm( 1, PCMSK1, PINC ); }
 ISR (PCINT2_vect) { Rc400::instance->register_pin_change_pwm( 2, PCMSK2, PIND ); }
-
-#else
-
-// Code for Teensy 3.x/LC and any other uController that supports pin change interrupts for any pin  
-  
-void Rc400::handleInterruptPWM( int ch ) { // ch = physical channel no
-  if ( digitalRead( channel[ch].pin ) ) {
-    channel[ch].last_high = micros();    
-  } else {
-    channel[ch].value = micros() - channel[ch].last_high; 
-  }
-  last_interrupt = micros();
-}
-
-void Rc400::handleInterruptPPM() {
-  uint32_t delta = micros() - ppm_last_pulse;
-  if ( delta > 4000 ) { // Reset pulse_counter on long gap
-    ppm_pulse_counter = 0;
-  } else {
-    if ( ppm_pulse_counter < RC400_NO_OF_CHANNELS ) {
-      channel[ppm_pulse_counter].value = delta;
-    }        
-    ppm_pulse_counter++;
-  }
-  last_interrupt = ppm_last_pulse = micros();
-}
 
 #endif
