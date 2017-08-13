@@ -241,8 +241,8 @@ void Pulse400::timer_start( void ) {
   timer.begin( PULSE400_ISR, 2 ); // interval 1 doesn't seem to work on Teensy LC
   timer.priority( 0 ); 
 #else 
-  Timer1.initialize( 1 ); 
-  Timer1.attachInterrupt( PULSE400_ISR );
+  Timer1.initialize(); 
+  Timer1.attachInterrupt( PULSE400_ISR, 1 );
 #endif  
 }
 
