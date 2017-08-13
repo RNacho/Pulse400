@@ -1,12 +1,13 @@
 #pragma once
 
-// Simplified TimerOne/TimerTwo alternative that uses Timer1 and Timer2 to 
+// Simplified TimerOne/TimerTwo alternative that uses Timer1 and Timer2 alternately to 
 // switch quickly between short and long delays
 //
 // Timer1 on its own can't switch quickly from a 1000 usec delay to a 10 usec delay. By combining
 // Timer1 for long ( > 127 usec) delays with Timer2 for short ( <= 127 usec) delays that becomes possible
 //
-// This Timer class is limited to delays between 1 and 4096 microseconds
+// This Timer class is limited to delays between 1 and 32767 microseconds
+
 
 #include <Arduino.h>
 
